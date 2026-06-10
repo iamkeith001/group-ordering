@@ -661,6 +661,19 @@ h1 {
     color: var(--text-main);
 }
 
+.success-btn-secondary {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1.5px solid var(--border-color);
+    margin-top: 12px;
+}
+
+.success-btn-secondary:hover {
+    color: var(--text-main);
+    border-color: var(--text-muted);
+    background: transparent;
+}
+
 .window-setup-hint {
     font-size: 0.8rem;
     color: var(--text-muted);

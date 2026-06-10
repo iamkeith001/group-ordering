@@ -89,6 +89,7 @@ const elSuccessView = document.getElementById('success-view');
 const elSuccessName = document.getElementById('success-name');
 const elSuccessDrink = document.getElementById('success-drink');
 const elSuccessContinueBtn = document.getElementById('success-continue-btn');
+const elSuccessExitBtn = document.getElementById('success-exit-btn');
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -256,6 +257,19 @@ function setupEventListeners() {
     // Success dialog: reload page to support ordering for another person
     elSuccessContinueBtn.addEventListener('click', () => {
         location.reload();
+    });
+
+    // Done ordering: try to close the tab; if the browser blocks it,
+    // show a farewell message instead
+    elSuccessExitBtn.addEventListener('click', () => {
+        window.close();
+        setTimeout(() => {
+            elSuccessView.innerHTML = `
+                <div class="success-icon">👋</div>
+                <h2>感謝點餐！</h2>
+                <p>您的訂單已送出，可以關閉此頁面了。</p>
+            `;
+        }, 300);
     });
 }
 
