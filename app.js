@@ -29,9 +29,18 @@ const firebaseConfig = {
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
-// 常用點餐成員：開團時會自動帶入「成員名單」欄位，開團人可現場增刪
+// 常用點餐成員（依首字筆劃排序）：開團時會自動帶入「成員名單」欄位，開團人可現場增刪
 const DEFAULT_MEMBERS = [
-    'Keith'
+    'Keith',
+    '成立',
+    '芸汶',
+    '怡惠',
+    '欣博',
+    '富哥',
+    '智凱',
+    '詩儀',
+    '簡博',
+    '瀞云'
 ];
 
 // State Variables
