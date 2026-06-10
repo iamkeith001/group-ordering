@@ -54,6 +54,10 @@
                     <h2>🕐 設定開團時間</h2>
                     <p class="window-setup-hint">本團尚未設定期限。設定後立即生效且不可修改，逾時將自動截止收單。</p>
                     <div class="form-group">
+                        <label for="window-title-input">團購標題（顯示在頁面最上方）</label>
+                        <input type="text" id="window-title-input" maxlength="60">
+                    </div>
+                    <div class="form-group">
                         <label for="window-open-input">開團時間</label>
                         <input type="datetime-local" id="window-open-input">
                     </div>
@@ -155,6 +159,6 @@
         <span id="sync-status-text">點餐資訊已同步</span>
     </div>
 
-    <script type="module" src="app.js?v=14"></script>
+    <script type="module" src="app.js?v=15"></script>
 </body>
 </html>

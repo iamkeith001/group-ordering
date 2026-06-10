@@ -6,10 +6,14 @@ service cloud.firestore {
     // cannot move the deadline.
     match /groups/{groupId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'members', 'menuItems', 'createdAt'])
+      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'title', 'members', 'menuItems', 'createdAt'])
         && request.resource.data.openAt is timestamp
         && request.resource.data.closeAt is timestamp
         && request.resource.data.closeAt > request.resource.data.openAt
+        && (!('title' in request.resource.data)
+          || (request.resource.data.title is string
+            && request.resource.data.title.size() > 0
+            && request.resource.data.title.size() <= 60))
         && (!('members' in request.resource.data)
           || (request.resource.data.members is list
             && request.resource.data.members.size() > 0

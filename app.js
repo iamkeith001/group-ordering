@@ -29,6 +29,8 @@ const firebaseConfig = {
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
+// 預設團購標題：開團時會自動帶入「團購標題」欄位，開團人可現場修改
+const DEFAULT_TITLE = '漢堡王群組點餐';
 // 預設 15 項餐點名：開團時會自動帶入「餐點名單」欄位，開團人可現場修改
 const DEFAULT_MENU_ITEMS = [
     '華堡 (Whopper)',
@@ -75,6 +77,7 @@ let hasRemoteConnectionError = false;
 let groupWindow = null; // {openAt: Date|null, closeAt: Date|null} from groups/{groupId} doc
 let groupMembers = null; // string[] from groups/{groupId}.members — when set, name input becomes a dropdown
 let groupMenuItems = null; // string[] from groups/{groupId}.menuItems — editable menu item names
+let groupTitle = DEFAULT_TITLE; // from groups/{groupId}.title — editable page title
 const firebaseApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(firebaseApp);
 
@@ -101,6 +104,7 @@ const elWindowOpenInput = document.getElementById('window-open-input');
 const elWindowCloseInput = document.getElementById('window-close-input');
 const elWindowMembersInput = document.getElementById('window-members-input');
 const elWindowMenuInput = document.getElementById('window-menu-input');
+const elWindowTitleInput = document.getElementById('window-title-input');
 const elWindowSetupBtn = document.getElementById('window-setup-btn');
 
 // Success view elements
@@ -149,6 +153,11 @@ function getFirebaseOrdersCollection() {
 
 // The menu is a flat editable list of item names (no fixed photos, since
 // restaurant menus change over time)
+function applyTitle() {
+    document.title = `${groupTitle} - 選擇你的餐點`;
+    document.querySelector('.header-wrapper h1').textContent = `🍔 ${groupTitle}`;
+}
+
 function buildMenuFromItems(items) {
     return [{
         category: '餐點',
@@ -167,16 +176,13 @@ async function init() {
         console.log('💡 Activated Mock Mode (Local Test Environment)');
     }
 
-    // Set Brand Headers
-    const brand = { name: '漢堡王', emoji: '🍔', categoryLabel: '選擇餐點' };
-    
-    document.title = `${brand.name}群組點餐 - 選擇你的餐點`;
-    document.querySelector('.header-wrapper h1').innerHTML = `${brand.emoji} ${brand.name}群組點餐`;
-    document.querySelector('.step-badge').innerHTML = `1️⃣ 步驟一：${brand.categoryLabel}`;
-    
+    // Set page title (the group's own title overrides it once loaded)
+    applyTitle();
+    document.querySelector('.step-badge').innerHTML = `1️⃣ 步驟一：選擇餐點`;
+
     // Dynamic selected preview empty text placeholder
-    document.querySelector('#selected-card h2').textContent = `${brand.emoji} 已選項目`;
-    document.querySelector('#selected-card .preview-empty-text').textContent = `請在下方選單點選您想點的${brand.categoryLabel.slice(2)}，可一次點多份`;
+    document.querySelector('#selected-card h2').textContent = `🍔 已選項目`;
+    document.querySelector('#selected-card .preview-empty-text').textContent = `請在下方選單點選您想點的餐點，可一次點多份`;
 
     // Start with the built-in editable menu; the group's own menuItems
     // (configured at setup time) override it once loaded
@@ -635,6 +641,10 @@ async function loadGroupWindow() {
                 renderCategoryTabs();
                 renderMenu();
             }
+            if (typeof data.title === 'string' && data.title.trim()) {
+                groupTitle = data.title.trim();
+                applyTitle();
+            }
         } else {
             showWindowSetupCard();
         }
@@ -674,6 +684,7 @@ function showWindowSetupCard() {
     const close = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     elWindowOpenInput.value = toDatetimeLocalValue(now);
     elWindowCloseInput.value = toDatetimeLocalValue(close);
+    elWindowTitleInput.value = DEFAULT_TITLE;
     elWindowMembersInput.value = DEFAULT_MEMBERS.join('\n');
     elWindowMenuInput.value = DEFAULT_MENU_ITEMS.join('\n');
     elWindowSetupCard.style.display = '';
@@ -689,6 +700,7 @@ async function submitWindowSetup() {
     const menuItems = [...new Set(
         elWindowMenuInput.value.split('\n').map(s => s.trim()).filter(Boolean)
     )];
+    const title = elWindowTitleInput.value.trim();
 
     if (!openAt || !closeAt || isNaN(openAt) || isNaN(closeAt)) {
         alert('請填寫完整的開團與截止時間。');
@@ -704,6 +716,10 @@ async function submitWindowSetup() {
     }
     if (members.some(m => m.length > 40)) {
         alert('成員名字最長 40 個字。');
+        return;
+    }
+    if (!title) {
+        alert('請填寫團購標題。');
         return;
     }
     if (menuItems.length === 0) {
@@ -725,11 +741,14 @@ async function submitWindowSetup() {
         await setDoc(doc(firestoreDb, 'groups', groupId), {
             openAt: Timestamp.fromDate(openAt),
             closeAt: Timestamp.fromDate(closeAt),
+            title: title,
             members: members,
             menuItems: menuItems,
             createdAt: serverTimestamp()
         });
         groupWindow = { openAt, closeAt };
+        groupTitle = title;
+        applyTitle();
         groupMembers = members;
         applyMemberSelect();
         groupMenuItems = menuItems;
