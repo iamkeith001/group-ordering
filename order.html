@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星巴克群組點餐 - 選擇你的飲品</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main Interactive Area -->
+    <div class="container" id="main-container">
+        
+        <!-- Header -->
+        <header class="header-wrapper">
+            <div class="group-badge" id="group-name">載入群組中...</div>
+            
+            <!-- Store Switcher (Brand Selector) -->
+            <div class="store-selector">
+                <button class="store-select-btn" id="btn-store-starbucks">☕ 星巴克</button>
+                <button class="store-select-btn" id="btn-store-burgerking">🍔 漢堡王</button>
+            </div>
+
+            <h1>☕ 星巴克群組點餐</h1>
+            <p class="subtitle">每人限選一杯，選好後送出點餐明細</p>
+        </header>
+
+        <!-- Layout Grid -->
+        <div class="layout-grid" id="layout-grid">
+            
+            <!-- Left Column: Menu list, Search and Category filters -->
+            <main class="menu-section">
+                <!-- Search & Filters -->
+                <div class="control-panel">
+                    <div class="step-badge">1️⃣ 步驟一：選擇飲品</div>
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="search-input" placeholder="搜尋咖啡、茶、星冰樂...">
+                    </div>
+                    <div class="category-tabs" id="category-tabs">
+                        <button class="tab-btn active" data-category="all">全部飲品</button>
+                        <!-- Dynamic Categories will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Menu Item Groups -->
+                <div class="menu-list" id="menu-list">
+                    <!-- Dynamic Menu Items will be inserted here -->
+                </div>
+            </main>
+
+            <!-- Right Column / Mobile Rearranged Cards -->
+            <aside class="sidebar-sticky">
+                
+                <!-- 1. Name Input Card -->
+                <section class="sidebar-card" id="name-card">
+                    <h2>2️⃣ 步驟二：填寫點餐姓名</h2>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="person-name">您的名字（將顯示在團體明細中）</label>
+                        <input type="text" id="person-name" placeholder="輸入您的姓名或暱稱" autocomplete="off">
+                    </div>
+                </section>
+
+                <!-- 2. Selected Drink Card -->
+                <section class="sidebar-card" id="selected-card">
+                    <h2>☕ 已選飲品</h2>
+                    <div class="selected-drink-preview" id="selected-drink-preview">
+                        <span class="preview-empty-text">請在下方選單點選您想點的飲品</span>
+                    </div>
+                </section>
+
+                <!-- 3. Submit Button Card -->
+                <div class="submit-action-container" id="submit-card">
+                    <button class="action-btn" id="submit-btn" disabled>
+                        <span>確認送出點餐</span>
+                    </button>
+                </div>
+
+                <!-- 4. Group Order Live Summary -->
+                <section class="summary-panel" id="summary-panel">
+                    <div class="summary-title-row">
+                        <h2 class="summary-title">👥 本群組點餐統計</h2>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button id="clear-data-btn" class="clear-btn-link">清空資料</button>
+                            <span class="summary-count-total" id="summary-count-total">0 杯</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-stats-box">
+                        <div class="stat-item">
+                            <span class="stat-label">已點人數</span>
+                            <span class="stat-value" id="stat-people">0 人</span>
+                        </div>
+                        <div class="stats-divider"></div>
+                        <div class="stat-item">
+                            <span class="stat-label">飲品款式</span>
+                            <span class="stat-value" id="stat-styles">0 種</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-list" id="summary-list">
+                        <!-- Group details will be inserted here -->
+                    </div>
+                </section>
+
+            </aside>
+        </div>
+    </div>
+
+    <!-- Success Completion View -->
+    <div class="success-card" id="success-view">
+        <div class="success-icon">✓</div>
+        <h2>點餐完成！</h2>
+        <p>您的點餐資訊已成功送出</p>
+        
+        <div class="success-summary">
+            <div class="success-summary-row">
+                <span>點餐人：</span>
+                <span class="success-summary-val" id="success-name">-</span>
+            </div>
+            <div class="success-summary-row" style="margin-top: 12px;">
+                <span>選購飲品：</span>
+                <span class="success-summary-val" id="success-drink">-</span>
+            </div>
+        </div>
+
+        <button class="success-btn" id="success-continue-btn">繼續幫其他同事點餐 →</button>
+    </div>
+
+    <!-- Floating Live Sync Status Indicator -->
+    <div class="sync-badge-fixed" id="sync-status">
+        <span class="sync-dot-green syncing"></span>
+        <span id="sync-status-text">點餐資訊已同步</span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

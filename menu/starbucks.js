@@ -1,0 +1,101 @@
+window.starbucksMenu = [
+  {
+    "category": "咖啡飲品",
+    "drinks": [
+      {"name":"星巴克咖啡三式","img":"https://www.starbucks.com.tw/common/objects/images/product/2026051809262449_63.jpg"},
+      {"name":"黑糖風味奶香咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/2026051809574854_24.jpg"},
+      {"name":"蘋果山茶花風味美式","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014065790_75.jpg"},
+      {"name":"鹹焦糖奶油爆米花風味那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/2025120811451775.jpg"},
+      {"name":"椰香綿雲那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/2025120811570200.jpg"},
+      {"name":"那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123114807447.jpg"},
+      {"name":"焦糖瑪奇朵","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123121126859.jpg"},
+      {"name":"馥列白","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123122918117.jpg"},
+      {"name":"可可瑪奇朵","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123123341747.jpg"},
+      {"name":"美式咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123120423502.jpg"},
+      {"name":"濃縮咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/2025012312151962.jpg"},
+      {"name":"卡布奇諾","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123121910321.jpg"},
+      {"name":"摩卡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123122245327.jpg"},
+      {"name":"特選馥郁那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123122632451.jpg"},
+      {"name":"特選雲朵泡泡美式咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/2026051809520492_17.jpg"},
+      {"name":"特選蜜柚雲朵泡泡美式咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/2026052000091989_56.jpg"},
+      {"name":"雲朵泡泡美式咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/2026051809513274_65.jpg"},
+      {"name":"冰黑糖風味奶香咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/2026051809241769_45.jpg"},
+      {"name":"冰蘋果山茶花風味美式","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014061592_33.jpg"},
+      {"name":"蘋果山茶花風味氣泡美式","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014053336_42.jpg"},
+      {"name":"冰那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123143515766.jpg"},
+      {"name":"冰焦糖瑪奇朵","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123144723324.jpg"},
+      {"name":"冰馥列白","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123152800410.jpg"},
+      {"name":"冰可可瑪奇朵","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123153127980.jpg"},
+      {"name":"冰美式咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123144409467.jpg"},
+      {"name":"冰摩卡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123145257965.jpg"},
+      {"name":"冰特選馥郁那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/2025012315220566.jpg"},
+      {"name":"雲朵冰搖濃縮咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123153446300.jpg"},
+      {"name":"冰椰香綿雲那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20251208115627985.jpg"},
+      {"name":"冰鹹焦糖奶油爆米花風味那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20251208114837949.jpg"},
+      {"name":"每日精選咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123161408497.jpg"},
+      {"name":"咖啡密斯朵","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123161953880.jpg"}
+    ]
+  },
+  {
+    "category": "茶瓦納",
+    "drinks": [
+      {"name":"草莓風味抹茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20260123141630221.jpg"},
+      {"name":"伯爵茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123175101214.jpg"},
+      {"name":"福吉茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20251226114804240.jpg"},
+      {"name":"經典紅茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123174544702.jpg"},
+      {"name":"醇濃抹茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123174829254.jpg"},
+      {"name":"玫瑰蜜香茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123175325718.jpg"},
+      {"name":"焦糖奶香紅茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/2026060308551957_100.jpg"},
+      {"name":"冰草莓風味抹茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20260123141742160.jpg"},
+      {"name":"冰伯爵茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20251030162726736.jpg"},
+      {"name":"冰福吉茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20251226114817529.jpg"},
+      {"name":"冰醇濃抹茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124104658509.jpg"},
+      {"name":"冰玫瑰蜜香茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124112112846.jpg"},
+      {"name":"冰經典紅茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124113528492.jpg"},
+      {"name":"冰焦糖奶香紅茶那堤","img":"https://www.starbucks.com.tw/common/objects/images/product/2026060308560136_4.jpg"},
+      {"name":"蜂蜜荔枝洋甘菊茶","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014073765_92.jpg"},
+      {"name":"蘋果山茶花風味青茶","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014130193_58.jpg"},
+      {"name":"洋甘菊花草茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124114458998.jpg"},
+      {"name":"英式紅茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124114649347.jpg"},
+      {"name":"熱蜜柚紅茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124114937617.jpg"},
+      {"name":"阿里山烏龍茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250523153803364.jpg"},
+      {"name":"沁恬荔枝洋甘菊茶","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014081334_93.jpg"},
+      {"name":"蜜柚檸檬果茶","img":"https://www.starbucks.com.tw/common/objects/images/product/2026042409530491_11.jpg"},
+      {"name":"冰蘋果山茶花風味青茶","img":"https://www.starbucks.com.tw/common/objects/images/product/2026033014101529_37.jpg"},
+      {"name":"冰阿里山烏龍茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250709105831975.jpg"},
+      {"name":"冰搖紅茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124115737749.jpg"},
+      {"name":"冰搖檸檬果茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124120628801.jpg"},
+      {"name":"阿里山蜜柚烏龍青茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124121331719.jpg"},
+      {"name":"冰蜜柚紅茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124121524152.jpg"},
+      {"name":"冰搖檸檬紅茶","img":"https://www.starbucks.com.tw/common/objects/images/product/20250124121700612.jpg"}
+    ]
+  },
+  {
+    "category": "星冰樂",
+    "drinks": [
+      {"name":"咖啡星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20211001141659501.jpg"},
+      {"name":"焦糖星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123164813895.jpg"},
+      {"name":"摩卡可可碎片星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123165318367.jpg"},
+      {"name":"焦糖可可碎片星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123165526862.jpg"},
+      {"name":"巧克力可可碎片星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123171201195.jpg"},
+      {"name":"醇濃抹茶星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123171509285.jpg"},
+      {"name":"香草風味星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123171708893.jpg"},
+      {"name":"雙果果汁星冰樂","img":"https://www.starbucks.com.tw/common/objects/images/product/20250123172041914.jpg"}
+    ]
+  },
+  {
+    "category": "冷萃咖啡",
+    "drinks": [
+      {"name":"紅心芭樂冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20251208114254679.jpg"},
+      {"name":"冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211121740916.jpeg"},
+      {"name":"經典特調冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211130828200.jpg"},
+      {"name":"香檸蜜柚冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211123140628.jpeg"},
+      {"name":"夏日冰柚冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211123709453.jpeg"},
+      {"name":"檸檬冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250422143023204.jpg"},
+      {"name":"鹹焦糖風味氮氣歐蕾","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211124759585.jpeg"},
+      {"name":"經典特調氮氣冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211125233583.jpeg"},
+      {"name":"氮氣冷萃咖啡","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211122430843.jpeg"},
+      {"name":"氮氣冷萃咖啡歐蕾","img":"https://www.starbucks.com.tw/common/objects/images/product/20250211131258789.jpeg"}
+    ]
+  }
+];
