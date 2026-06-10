@@ -6,7 +6,7 @@ service cloud.firestore {
     // cannot move the deadline.
     match /groups/{groupId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'members', 'createdAt'])
+      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'members', 'menuItems', 'createdAt'])
         && request.resource.data.openAt is timestamp
         && request.resource.data.closeAt is timestamp
         && request.resource.data.closeAt > request.resource.data.openAt
@@ -14,6 +14,10 @@ service cloud.firestore {
           || (request.resource.data.members is list
             && request.resource.data.members.size() > 0
             && request.resource.data.members.size() <= 200))
+        && (!('menuItems' in request.resource.data)
+          || (request.resource.data.menuItems is list
+            && request.resource.data.menuItems.size() > 0
+            && request.resource.data.menuItems.size() <= 50))
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }

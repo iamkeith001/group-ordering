@@ -29,6 +29,24 @@ const firebaseConfig = {
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
+// 預設 15 項餐點名：開團時會自動帶入「餐點名單」欄位，開團人可現場修改
+const DEFAULT_MENU_ITEMS = [
+    '華堡 (Whopper)',
+    '雙層華堡 (Double Whopper)',
+    '小華堡 (Whopper Jr.)',
+    '辣味華堡 (Spicy Whopper)',
+    '美式花生雙層牛肉堡',
+    '勁濃培根雙層牛肉堡',
+    '火烤雞腿堡',
+    '華鱈魚堡',
+    '脆洋蔥雙起司雞排堡',
+    '經典薯條',
+    '酥炸洋蔥圈',
+    '炸雞塊 (Chicken Nuggets)',
+    '可口可樂 (Coke)',
+    '檸檬紅茶',
+    '熱無糖紅茶'
+];
 // 常用點餐成員（依首字筆劃排序）：開團時會自動帶入「成員名單」欄位，開團人可現場增刪
 const DEFAULT_MEMBERS = [
     'Keith',
@@ -56,6 +74,7 @@ let firebaseUnsubscribe = null;
 let hasRemoteConnectionError = false;
 let groupWindow = null; // {openAt: Date|null, closeAt: Date|null} from groups/{groupId} doc
 let groupMembers = null; // string[] from groups/{groupId}.members — when set, name input becomes a dropdown
+let groupMenuItems = null; // string[] from groups/{groupId}.menuItems — editable menu item names
 const firebaseApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(firebaseApp);
 
@@ -81,6 +100,7 @@ const elWindowSetupCard = document.getElementById('window-setup-card');
 const elWindowOpenInput = document.getElementById('window-open-input');
 const elWindowCloseInput = document.getElementById('window-close-input');
 const elWindowMembersInput = document.getElementById('window-members-input');
+const elWindowMenuInput = document.getElementById('window-menu-input');
 const elWindowSetupBtn = document.getElementById('window-setup-btn');
 
 // Success view elements
@@ -127,15 +147,13 @@ function getFirebaseOrdersCollection() {
     return collection(firestoreDb, 'groups', groupId, 'orders');
 }
 
-// Helper to load external javascript files locally without CORS errors
-function loadMenuScript(src) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = () => reject(new Error(`Failed to load: ${src}`));
-        document.head.appendChild(script);
-    });
+// The menu is a flat editable list of item names (no fixed photos, since
+// restaurant menus change over time)
+function buildMenuFromItems(items) {
+    return [{
+        category: '餐點',
+        drinks: items.map(n => ({ name: n, img: '' }))
+    }];
 }
 
 // Initialization
@@ -160,15 +178,9 @@ async function init() {
     document.querySelector('#selected-card h2').textContent = `${brand.emoji} 已選項目`;
     document.querySelector('#selected-card .preview-empty-text').textContent = `請在下方選單點選您想點的${brand.categoryLabel.slice(2)}，可一次點多份`;
 
-    try {
-        // Load menu configuration script dynamically instead of fetch to avoid file:// protocol CORS blocks
-        await loadMenuScript(`menu/${storeId}.js?v=2`);
-        menuData = window[`${storeId}Menu`] || [];
-    } catch (err) {
-        console.error(`Failed to load menu script: menu/${storeId}.js`, err);
-        elMenuList.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:0.95rem;">❌ 載入菜單失敗，請確認 /menu/${storeId}.js 檔案是否存在！</div>`;
-        return;
-    }
+    // Start with the built-in editable menu; the group's own menuItems
+    // (configured at setup time) override it once loaded
+    menuData = buildMenuFromItems(DEFAULT_MENU_ITEMS);
 
     // Render category buttons dynamically
     renderCategoryTabs();
@@ -295,6 +307,13 @@ function showSyncingStatus(isSyncing) {
 
 // Generate tabs dynamically based on menu categories
 function renderCategoryTabs() {
+    // A single-category menu doesn't need filter tabs
+    if (menuData.length <= 1) {
+        elCategoryTabs.style.display = 'none';
+        currentCategory = 'all';
+        return;
+    }
+    elCategoryTabs.style.display = '';
     let html = `<button class="tab-btn active" data-category="all">全部</button>`;
     menuData.forEach(cat => {
         html += `<button class="tab-btn" data-category="${escapeHtml(cat.category)}">${escapeHtml(cat.category)}</button>`;
@@ -336,9 +355,9 @@ function renderMenu() {
             const takerTags = takers.map(name => `<span class="taker-tag" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`).join('');
 
             menuHTML += `
-                <div class="drink-card ${isTaken ? 'has-takers' : ''} ${isSelected ? 'selected-active' : ''}" 
+                <div class="drink-card ${isTaken ? 'has-takers' : ''} ${isSelected ? 'selected-active' : ''}"
                      data-drink-name="${safeName}" data-drink-img="${safeImg}">
-                    <img class="drink-img" src="${safeImg}" alt="${safeName}" loading="lazy">
+                    ${drink.img ? `<img class="drink-img" src="${safeImg}" alt="${safeName}" loading="lazy">` : `<div class="drink-img drink-img-placeholder">🍔</div>`}
                     <div class="drink-info">
                         <div class="drink-name-row">
                             <span class="drink-name">${safeName}</span>
@@ -474,7 +493,7 @@ function renderCartPreview() {
     const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
     const rows = cart.map(i => `
         <div class="cart-item">
-            <img class="cart-item-img" src="${escapeHtml(i.img)}" alt="${escapeHtml(i.name)}" loading="lazy">
+            ${i.img ? `<img class="cart-item-img" src="${escapeHtml(i.img)}" alt="${escapeHtml(i.name)}" loading="lazy">` : `<div class="cart-item-img cart-item-img-placeholder">🍔</div>`}
             <span class="cart-item-name">${escapeHtml(i.name)}</span>
             <div class="cart-qty-controls">
                 <button class="cart-qty-btn" data-action="minus" data-name="${escapeHtml(i.name)}">−</button>
@@ -610,6 +629,12 @@ async function loadGroupWindow() {
                 groupMembers = data.members;
                 applyMemberSelect();
             }
+            if (Array.isArray(data.menuItems) && data.menuItems.length > 0) {
+                groupMenuItems = data.menuItems;
+                menuData = buildMenuFromItems(groupMenuItems);
+                renderCategoryTabs();
+                renderMenu();
+            }
         } else {
             showWindowSetupCard();
         }
@@ -650,6 +675,7 @@ function showWindowSetupCard() {
     elWindowOpenInput.value = toDatetimeLocalValue(now);
     elWindowCloseInput.value = toDatetimeLocalValue(close);
     elWindowMembersInput.value = DEFAULT_MEMBERS.join('\n');
+    elWindowMenuInput.value = DEFAULT_MENU_ITEMS.join('\n');
     elWindowSetupCard.style.display = '';
     elWindowSetupBtn.addEventListener('click', submitWindowSetup);
 }
@@ -659,6 +685,9 @@ async function submitWindowSetup() {
     const closeAt = elWindowCloseInput.value ? new Date(elWindowCloseInput.value) : null;
     const members = [...new Set(
         elWindowMembersInput.value.split('\n').map(s => s.trim()).filter(Boolean)
+    )];
+    const menuItems = [...new Set(
+        elWindowMenuInput.value.split('\n').map(s => s.trim()).filter(Boolean)
     )];
 
     if (!openAt || !closeAt || isNaN(openAt) || isNaN(closeAt)) {
@@ -677,7 +706,15 @@ async function submitWindowSetup() {
         alert('成員名字最長 40 個字。');
         return;
     }
-    if (!confirm(`確定要設定本團期限嗎？\n開團：${formatWindowTime(openAt)}\n截止：${formatWindowTime(closeAt)}\n成員：${members.length} 人\n\n設定後不可修改。`)) {
+    if (menuItems.length === 0) {
+        alert('請至少填寫一項餐點。');
+        return;
+    }
+    if (menuItems.length > 50 || menuItems.some(m => m.length > 100)) {
+        alert('餐點最多 50 項，每項名稱最長 100 個字。');
+        return;
+    }
+    if (!confirm(`確定要設定本團期限嗎？\n開團：${formatWindowTime(openAt)}\n截止：${formatWindowTime(closeAt)}\n成員：${members.length} 人｜餐點：${menuItems.length} 項\n\n設定後不可修改。`)) {
         return;
     }
 
@@ -689,11 +726,16 @@ async function submitWindowSetup() {
             openAt: Timestamp.fromDate(openAt),
             closeAt: Timestamp.fromDate(closeAt),
             members: members,
+            menuItems: menuItems,
             createdAt: serverTimestamp()
         });
         groupWindow = { openAt, closeAt };
         groupMembers = members;
         applyMemberSelect();
+        groupMenuItems = menuItems;
+        menuData = buildMenuFromItems(groupMenuItems);
+        renderCategoryTabs();
+        renderMenu();
         elWindowSetupCard.style.display = 'none';
         renderOrderWindowBanner();
     } catch (err) {
