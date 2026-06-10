@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>星巴克群組點餐 - 選擇你的飲品</title>
+    <title>漢堡王群組點餐 - 選擇你的餐點</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,15 +13,9 @@
         <!-- Header -->
         <header class="header-wrapper">
             <div class="group-badge" id="group-name">載入群組中...</div>
-            
-            <!-- Store Switcher (Brand Selector) -->
-            <div class="store-selector">
-                <button class="store-select-btn" id="btn-store-starbucks">☕ 星巴克</button>
-                <button class="store-select-btn" id="btn-store-burgerking">🍔 漢堡王</button>
-            </div>
 
-            <h1>☕ 星巴克群組點餐</h1>
-            <p class="subtitle">每人限選一杯，選好後送出點餐明細</p>
+            <h1>🍔 漢堡王群組點餐</h1>
+            <p class="subtitle">每人限選一份，選好後送出點餐明細</p>
         </header>
 
         <!-- Layout Grid -->
@@ -31,16 +25,16 @@
             <main class="menu-section">
                 <!-- Search & Filters -->
                 <div class="control-panel">
-                    <div class="step-badge">1️⃣ 步驟一：選擇飲品</div>
+                    <div class="step-badge">1️⃣ 步驟一：選擇餐點</div>
                     <div class="search-box">
                         <svg viewBox="0 0 24 24">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" id="search-input" placeholder="搜尋咖啡、茶、星冰樂...">
+                        <input type="text" id="search-input" placeholder="搜尋漢堡、點心、飲料...">
                     </div>
                     <div class="category-tabs" id="category-tabs">
-                        <button class="tab-btn active" data-category="all">全部飲品</button>
+                        <button class="tab-btn active" data-category="all">全部餐點</button>
                         <!-- Dynamic Categories will be inserted here -->
                     </div>
                 </div>
@@ -65,9 +59,9 @@
 
                 <!-- 2. Selected Drink Card -->
                 <section class="sidebar-card" id="selected-card">
-                    <h2>☕ 已選飲品</h2>
+                    <h2>🍔 已選餐點</h2>
                     <div class="selected-drink-preview" id="selected-drink-preview">
-                        <span class="preview-empty-text">請在下方選單點選您想點的飲品</span>
+                        <span class="preview-empty-text">請在下方選單點選您想點的餐點</span>
                     </div>
                 </section>
 
@@ -84,7 +78,7 @@
                         <h2 class="summary-title">👥 本群組點餐統計</h2>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <button id="clear-data-btn" class="clear-btn-link">清空資料</button>
-                            <span class="summary-count-total" id="summary-count-total">0 杯</span>
+                            <span class="summary-count-total" id="summary-count-total">0 份</span>
                         </div>
                     </div>
 
@@ -95,7 +89,7 @@
                         </div>
                         <div class="stats-divider"></div>
                         <div class="stat-item">
-                            <span class="stat-label">飲品款式</span>
+                            <span class="stat-label">餐點款式</span>
                             <span class="stat-value" id="stat-styles">0 種</span>
                         </div>
                     </div>
@@ -121,7 +115,7 @@
                 <span class="success-summary-val" id="success-name">-</span>
             </div>
             <div class="success-summary-row" style="margin-top: 12px;">
-                <span>選購飲品：</span>
+                <span>選購餐點：</span>
                 <span class="success-summary-val" id="success-drink">-</span>
             </div>
         </div>

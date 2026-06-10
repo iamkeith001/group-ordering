@@ -1,7 +1,7 @@
 // Configuration & Parameters
 const API_BASE = 'https://claw.kht50.cc/starbucks/api/';
 const params = new URLSearchParams(location.search);
-const storeId = params.get('s') || 'starbucks'; // Default to starbucks, supports burgerking
+const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
 
@@ -33,10 +33,6 @@ const elSyncStatus = document.getElementById('sync-status');
 const elSyncStatusText = document.getElementById('sync-status-text');
 const elClearDataBtn = document.getElementById('clear-data-btn');
 
-// Brand Switcher Elements
-const elBtnStarbucks = document.getElementById('btn-store-starbucks');
-const elBtnBurgerking = document.getElementById('btn-store-burgerking');
-
 // Success view elements
 const elMainContainer = document.getElementById('main-container');
 const elSuccessView = document.getElementById('success-view');
@@ -66,35 +62,10 @@ async function init() {
         console.log('💡 Activated Mock Mode (Local Test Environment)');
     }
 
-    // Set Active Brand Switcher button highlight
-    if (storeId === 'burgerking') {
-        elBtnBurgerking.classList.add('active');
-        elBtnStarbucks.classList.remove('active');
-    } else {
-        elBtnStarbucks.classList.add('active');
-        elBtnBurgerking.classList.remove('active');
-    }
-
-    // Bind Brand Switcher click events to reload with store parameter
-    elBtnStarbucks.addEventListener('click', () => {
-        if (storeId !== 'starbucks') {
-            location.search = `?s=starbucks&g=${groupId}&n=${encodeURIComponent(groupName)}`;
-        }
-    });
-    elBtnBurgerking.addEventListener('click', () => {
-        if (storeId !== 'burgerking') {
-            location.search = `?s=burgerking&g=${groupId}&n=${encodeURIComponent(groupName)}`;
-        }
-    });
-
-    // Set Brand Headers Dynamically
-    const brandNames = {
-        'starbucks': { name: '星巴克', emoji: '☕', categoryLabel: '選擇飲品' },
-        'burgerking': { name: '漢堡王', emoji: '🍔', categoryLabel: '選擇餐點' }
-    };
-    const brand = brandNames[storeId] || { name: '線上', emoji: '🛍️', categoryLabel: '選擇商品' };
+    // Set Brand Headers
+    const brand = { name: '漢堡王', emoji: '🍔', categoryLabel: '選擇餐點' };
     
-    document.title = `${brand.name}群組點餐 - 選擇你的商品`;
+    document.title = `${brand.name}群組點餐 - 選擇你的餐點`;
     document.querySelector('.header-wrapper h1').innerHTML = `${brand.emoji} ${brand.name}群組點餐`;
     document.querySelector('.step-badge').innerHTML = `1️⃣ 步驟一：${brand.categoryLabel}`;
     
