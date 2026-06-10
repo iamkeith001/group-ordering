@@ -1,6 +1,11 @@
 // Configuration & Parameters
-const API_BASE = '/api/';
 const params = new URLSearchParams(location.search);
+const DEFAULT_REMOTE_API_BASE = 'https://claw.kht50.cc/starbucks/api/';
+const API_BASE = params.get('api') || (
+    location.hostname.endsWith('github.io')
+        ? DEFAULT_REMOTE_API_BASE
+        : '/api/'
+);
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
