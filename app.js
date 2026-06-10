@@ -397,6 +397,17 @@ async function syncData() {
 
     try {
         const res = await fetch(`${API_BASE}get.php?g=${groupId}`);
+        
+        // If server returns 404, the group ID is unregistered in the database
+        if (res.status === 404) {
+            showGroupNotFoundError();
+            return;
+        }
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const data = await res.json();
         
         if (data.success && data.orders) {
@@ -413,6 +424,28 @@ async function syncData() {
         loadMockData();
     }
 }
+
+// Display group not found warning on the UI
+function showGroupNotFoundError() {
+    elMenuList.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+            <div style="font-size:3rem;margin-bottom:16px;">⚠️</div>
+            <h3 style="color:var(--text-color);margin-bottom:8px;font-size:1.1rem;">此點餐群組尚未啟用</h3>
+            <p style="font-size:0.85rem;line-height:1.5;max-width:320px;margin:0 auto 20px;">
+                網址中的群組 ID (g) 未在系統資料庫中註冊。請使用由您的系統或小幫手發起的正確連結！
+            </p>
+        </div>
+    `;
+    if (syncInterval) {
+        clearInterval(syncInterval);
+    }
+    // Clear dashboard numbers
+    elSummaryCountTotal.textContent = '0 份';
+    elStatPeople.textContent = '0 人';
+    elStatStyles.textContent = '0 種';
+    elSummaryList.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.85rem;">群組未啟用 👥</div>`;
+}
+
 
 // Process flat order array into drink mapping
 function processOrdersToTakenMap(orders) {
