@@ -439,7 +439,7 @@ function startFirebaseSync() {
 
     const ordersQuery = query(getFirebaseOrdersCollection(), orderBy('createdAt', 'asc'));
     firebaseUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
-        allOrders = snapshot.docs.map(doc => {
+        allOrders = dedupeOrdersByName(snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 name: data.name || '',
@@ -447,7 +447,7 @@ function startFirebaseSync() {
                 img: data.img || '',
                 createdAt: data.createdAt || null
             };
-        });
+        }));
         processOrdersToTakenMap(allOrders);
         hasRemoteConnectionError = false;
         updateMenuStates();
@@ -485,8 +485,8 @@ async function syncData() {
         
         if (data.success && data.orders) {
             hasRemoteConnectionError = false;
-            allOrders = data.orders;
-            processOrdersToTakenMap(data.orders);
+            allOrders = dedupeOrdersByName(data.orders);
+            processOrdersToTakenMap(allOrders);
         } else {
             throw new Error(data.error || 'API error response');
         }
@@ -523,6 +523,17 @@ function showGroupNotFoundError() {
 }
 
 
+// Orders are append-only (Firestore rules forbid update/delete), so a person
+// who re-submits gets a new record; keep only each name's latest order.
+// Input must be sorted oldest-first so later entries win.
+function dedupeOrdersByName(orders) {
+    const latestByName = new Map();
+    orders.forEach(o => {
+        latestByName.set(String(o.name || '').trim(), o);
+    });
+    return [...latestByName.values()];
+}
+
 // Process flat order array into drink mapping
 function processOrdersToTakenMap(orders) {
     const map = {};
@@ -551,7 +562,7 @@ function loadMockData() {
         localStorage.setItem(localKey, JSON.stringify(initialMock));
     }
     
-    allOrders = readOrdersFromLocalStorage(localKey);
+    allOrders = dedupeOrdersByName(readOrdersFromLocalStorage(localKey));
     processOrdersToTakenMap(allOrders);
 }
 
