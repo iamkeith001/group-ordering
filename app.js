@@ -1,5 +1,5 @@
 // Configuration & Parameters
-const API_BASE = 'https://claw.kht50.cc/starbucks/api/';
+const API_BASE = '/api/';
 const params = new URLSearchParams(location.search);
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
@@ -8,12 +8,13 @@ const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
 // State Variables
 let menuData = []; // Loaded dynamically from script
 let selectedDrink = null;
-let takenDrinks = {}; // drinkName -> [array of names]
+let takenDrinks = {}; // itemName -> [array of names]
 let allOrders = []; // Array of actual order objects {name, drink, img}
 let currentCategory = 'all';
 let searchQuery = '';
 let isMockMode = false;
 let syncInterval = null;
+let hasRemoteConnectionError = false;
 
 // DOM Elements
 const elGroupName = document.getElementById('group-name');
@@ -39,6 +40,34 @@ const elSuccessView = document.getElementById('success-view');
 const elSuccessName = document.getElementById('success-name');
 const elSuccessDrink = document.getElementById('success-drink');
 const elSuccessContinueBtn = document.getElementById('success-continue-btn');
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getLocalStorageKey() {
+    return `order-mock-orders-${groupId}-${storeId}`;
+}
+
+function getLegacyLocalStorageKey() {
+    return `sb-mock-orders-${groupId}-${storeId}`;
+}
+
+function readOrdersFromLocalStorage(key) {
+    try {
+        const orders = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(orders) ? orders : [];
+    } catch (err) {
+        console.warn(`Invalid local order cache for ${key}, resetting it.`, err);
+        localStorage.setItem(key, JSON.stringify([]));
+        return [];
+    }
+}
 
 // Helper to load external javascript files locally without CORS errors
 function loadMenuScript(src) {
@@ -164,7 +193,9 @@ function showSyncingStatus(isSyncing) {
         dot.classList.add('syncing');
         elSyncStatus.classList.add('active');
     } else {
-        elSyncStatusText.textContent = isMockMode ? '點餐資訊已同步 (Mock 模式)' : '點餐資訊已即時同步';
+        elSyncStatusText.textContent = hasRemoteConnectionError
+            ? '雲端同步連線異常'
+            : (isMockMode ? '點餐資訊已同步 (Mock 模式)' : '點餐資訊已即時同步');
         dot.classList.remove('syncing');
         elSyncStatus.classList.add('active');
         // Auto-fade out status badge after 3 seconds
@@ -178,7 +209,7 @@ function showSyncingStatus(isSyncing) {
 function renderCategoryTabs() {
     let html = `<button class="tab-btn active" data-category="all">全部</button>`;
     menuData.forEach(cat => {
-        html += `<button class="tab-btn" data-category="${cat.category}">${cat.category}</button>`;
+        html += `<button class="tab-btn" data-category="${escapeHtml(cat.category)}">${escapeHtml(cat.category)}</button>`;
     });
     elCategoryTabs.innerHTML = html;
 }
@@ -202,8 +233,8 @@ function renderMenu() {
         if (matchedDrinks.length === 0) return;
 
         menuHTML += `
-        <div class="category-group" id="cat-group-${cat.category}">
-            <h3 class="category-title">${cat.category}</h3>
+        <div class="category-group">
+            <h3 class="category-title">${escapeHtml(cat.category)}</h3>
             <div class="menu-list-items">
         `;
 
@@ -211,15 +242,17 @@ function renderMenu() {
             const takers = takenDrinks[drink.name] || [];
             const isTaken = takers.length > 0;
             const isSelected = selectedDrink && selectedDrink.name === drink.name;
-            const takerTags = takers.map(name => `<span class="taker-tag" title="${name}">${name}</span>`).join('');
+            const safeName = escapeHtml(drink.name);
+            const safeImg = escapeHtml(drink.img);
+            const takerTags = takers.map(name => `<span class="taker-tag" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`).join('');
 
             menuHTML += `
                 <div class="drink-card ${isTaken ? 'has-takers' : ''} ${isSelected ? 'selected-active' : ''}" 
-                     data-drink-name="${drink.name}" data-drink-img="${drink.img}">
-                    <img class="drink-img" src="${drink.img}" alt="${drink.name}" loading="lazy">
+                     data-drink-name="${safeName}" data-drink-img="${safeImg}">
+                    <img class="drink-img" src="${safeImg}" alt="${safeName}" loading="lazy">
                     <div class="drink-info">
                         <div class="drink-name-row">
-                            <span class="drink-name">${drink.name}</span>
+                            <span class="drink-name">${safeName}</span>
                             ${isTaken ? `<span class="takers-count-badge">${takers.length} 人點了</span>` : ''}
                         </div>
                         ${isTaken ? `<div class="takers-list">👥 ${takerTags}</div>` : ''}
@@ -293,7 +326,7 @@ function updateMenuStates() {
         let listDiv = infoDiv.querySelector('.takers-list');
 
         if (isTaken) {
-            const takerTags = takers.map(n => `<span class="taker-tag" title="${n}">${n}</span>`).join('');
+            const takerTags = takers.map(n => `<span class="taker-tag" title="${escapeHtml(n)}">${escapeHtml(n)}</span>`).join('');
             if (!listDiv) {
                 listDiv = document.createElement('div');
                 listDiv.className = 'takers-list';
@@ -309,13 +342,15 @@ function updateMenuStates() {
 // Select Drink
 function selectDrink(name, img) {
     selectedDrink = { name, img };
+    const safeName = escapeHtml(name);
+    const safeImg = escapeHtml(img);
 
     // Update selected preview
     elSelectedDrinkPreview.innerHTML = `
-        <img class="preview-img" src="${img}" alt="${name}">
+        <img class="preview-img" src="${safeImg}" alt="${safeName}">
         <div class="preview-content">
             <div class="preview-label">您選擇的項目</div>
-            <div class="preview-title">${name}</div>
+            <div class="preview-title">${safeName}</div>
             <button class="change-selection-btn">重新選擇</button>
         </div>
     `;
@@ -382,18 +417,21 @@ async function syncData() {
         const data = await res.json();
         
         if (data.success && data.orders) {
+            hasRemoteConnectionError = false;
             allOrders = data.orders;
             processOrdersToTakenMap(data.orders);
         } else {
-            console.warn('API error response, switching to local mock database');
-            isMockMode = true;
-            loadMockData();
+            throw new Error(data.error || 'API error response');
         }
     } catch (e) {
-        console.error('Remote sync failed, switching to local mock database', e);
-        isMockMode = true;
-        loadMockData();
+        console.error('Remote sync failed', e);
+        hasRemoteConnectionError = true;
+        showRemoteConnectionError();
     }
+}
+
+function showRemoteConnectionError() {
+    elSummaryList.innerHTML = `<div style="text-align:center;padding:20px;color:#d32f2f;font-size:0.85rem;">雲端同步失敗，請稍後再試</div>`;
 }
 
 // Display group not found warning on the UI
@@ -401,7 +439,7 @@ function showGroupNotFoundError() {
     elMenuList.innerHTML = `
         <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
             <div style="font-size:3rem;margin-bottom:16px;">⚠️</div>
-            <h3 style="color:var(--text-color);margin-bottom:8px;font-size:1.1rem;">此點餐群組尚未啟用</h3>
+            <h3 style="color:var(--text-main);margin-bottom:8px;font-size:1.1rem;">此點餐群組尚未啟用</h3>
             <p style="font-size:0.85rem;line-height:1.5;max-width:320px;margin:0 auto 20px;">
                 網址中的群組 ID (g) 未在系統資料庫中註冊。請使用由您的系統或小幫手發起的正確連結！
             </p>
@@ -432,23 +470,28 @@ function processOrdersToTakenMap(orders) {
 
 // Local mock database helpers
 function loadMockData() {
-    const localKey = `sb-mock-orders-${groupId}-${storeId}`; // Include storeId to isolate group orders between brands
+    const localKey = getLocalStorageKey(); // Include storeId to isolate group orders between brands
+    const legacyLocalKey = getLegacyLocalStorageKey();
     let mockData = localStorage.getItem(localKey);
+
+    if (!mockData && localStorage.getItem(legacyLocalKey)) {
+        mockData = localStorage.getItem(legacyLocalKey);
+        localStorage.setItem(localKey, mockData);
+    }
     
     if (!mockData) {
         const initialMock = [];
         localStorage.setItem(localKey, JSON.stringify(initialMock));
-        mockData = JSON.stringify(initialMock);
     }
     
-    allOrders = JSON.parse(mockData);
+    allOrders = readOrdersFromLocalStorage(localKey);
     processOrdersToTakenMap(allOrders);
 }
 
 // Clear all local mock orders for the current group and store
 async function clearGroupData() {
     if (isMockMode) {
-        const localKey = `sb-mock-orders-${groupId}-${storeId}`;
+        const localKey = getLocalStorageKey();
         localStorage.setItem(localKey, JSON.stringify([]));
         allOrders = [];
         takenDrinks = {};
@@ -479,8 +522,8 @@ function updateSummaryDashboard() {
         const reversedOrders = [...allOrders].reverse();
         elSummaryList.innerHTML = reversedOrders.map(o => `
             <div class="summary-item">
-                <span class="summary-item-name">👤 ${o.name}</span>
-                <span class="summary-item-drink">${o.drink}</span>
+                <span class="summary-item-name">👤 ${escapeHtml(o.name)}</span>
+                <span class="summary-item-drink">${escapeHtml(o.drink)}</span>
             </div>
         `).join('');
     }
@@ -504,8 +547,8 @@ async function submitOrder() {
     if (isMockMode) {
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        const localKey = `sb-mock-orders-${groupId}-${storeId}`;
-        const currentMock = JSON.parse(localStorage.getItem(localKey) || '[]');
+        const localKey = getLocalStorageKey();
+        const currentMock = readOrdersFromLocalStorage(localKey);
         currentMock.push(orderPayload);
         localStorage.setItem(localKey, JSON.stringify(currentMock));
 
@@ -529,15 +572,10 @@ async function submitOrder() {
             elSubmitBtn.querySelector('span').textContent = '確認送出點餐';
         }
     } catch (err) {
-        console.error('Submit failed, fall backing to mock mode...', err);
-        alert('網路連線失敗，已自動為您保存於本地測試資料庫中！');
-        
-        const localKey = `sb-mock-orders-${groupId}-${storeId}`;
-        const currentMock = JSON.parse(localStorage.getItem(localKey) || '[]');
-        currentMock.push(orderPayload);
-        localStorage.setItem(localKey, JSON.stringify(currentMock));
-        
-        showSuccessScreen(name, selectedDrink.name);
+        console.error('Submit failed', err);
+        alert('雲端送出失敗，請確認網路連線後再重試。');
+        elSubmitBtn.removeAttribute('disabled');
+        elSubmitBtn.querySelector('span').textContent = '確認送出點餐';
     }
 }
 
