@@ -363,7 +363,7 @@ function renderMenu() {
             menuHTML += `
                 <div class="drink-card ${isTaken ? 'has-takers' : ''} ${isSelected ? 'selected-active' : ''}"
                      data-drink-name="${safeName}" data-drink-img="${safeImg}">
-                    ${drink.img ? `<img class="drink-img" src="${safeImg}" alt="${safeName}" loading="lazy">` : `<div class="drink-img drink-img-placeholder">🍔</div>`}
+                    ${drink.img ? `<img class="drink-img" src="${safeImg}" alt="${safeName}" loading="lazy">` : ''}
                     <div class="drink-info">
                         <div class="drink-name-row">
                             <span class="drink-name">${safeName}</span>
@@ -499,7 +499,7 @@ function renderCartPreview() {
     const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
     const rows = cart.map(i => `
         <div class="cart-item">
-            ${i.img ? `<img class="cart-item-img" src="${escapeHtml(i.img)}" alt="${escapeHtml(i.name)}" loading="lazy">` : `<div class="cart-item-img cart-item-img-placeholder">🍔</div>`}
+            ${i.img ? `<img class="cart-item-img" src="${escapeHtml(i.img)}" alt="${escapeHtml(i.name)}" loading="lazy">` : ''}
             <span class="cart-item-name">${escapeHtml(i.name)}</span>
             <div class="cart-qty-controls">
                 <button class="cart-qty-btn" data-action="minus" data-name="${escapeHtml(i.name)}">−</button>
