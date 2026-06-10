@@ -49,6 +49,23 @@
             <!-- Right Column / Mobile Rearranged Cards -->
             <aside class="sidebar-sticky">
                 
+                <!-- 0. Ordering Window Setup Card (only visible when the group has no deadline yet) -->
+                <section class="sidebar-card" id="window-setup-card" style="display:none;">
+                    <h2>🕐 設定開團時間</h2>
+                    <p class="window-setup-hint">本團尚未設定期限。設定後立即生效且不可修改，逾時將自動截止收單。</p>
+                    <div class="form-group">
+                        <label for="window-open-input">開團時間</label>
+                        <input type="datetime-local" id="window-open-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="window-close-input">截止時間</label>
+                        <input type="datetime-local" id="window-close-input">
+                    </div>
+                    <button class="action-btn" id="window-setup-btn">
+                        <span>建立開團期限</span>
+                    </button>
+                </section>
+
                 <!-- 1. Name Input Card -->
                 <section class="sidebar-card" id="name-card">
                     <h2>2️⃣ 步驟二：填寫點餐姓名</h2>
@@ -127,6 +144,6 @@
         <span id="sync-status-text">點餐資訊已同步</span>
     </div>
 
-    <script type="module" src="app.js?v=6"></script>
+    <script type="module" src="app.js?v=7"></script>
 </body>
 </html>

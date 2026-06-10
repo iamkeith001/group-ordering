@@ -8,7 +8,9 @@ import {
     onSnapshot,
     orderBy,
     query,
-    serverTimestamp
+    serverTimestamp,
+    setDoc,
+    Timestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 // Configuration & Parameters
@@ -60,6 +62,10 @@ const elSummaryList = document.getElementById('summary-list');
 const elSyncStatus = document.getElementById('sync-status');
 const elSyncStatusText = document.getElementById('sync-status-text');
 const elOrderWindowBanner = document.getElementById('order-window-banner');
+const elWindowSetupCard = document.getElementById('window-setup-card');
+const elWindowOpenInput = document.getElementById('window-open-input');
+const elWindowCloseInput = document.getElementById('window-close-input');
+const elWindowSetupBtn = document.getElementById('window-setup-btn');
 
 // Success view elements
 const elMainContainer = document.getElementById('main-container');
@@ -532,9 +538,70 @@ async function loadGroupWindow() {
                 openAt: data.openAt && data.openAt.toDate ? data.openAt.toDate() : null,
                 closeAt: data.closeAt && data.closeAt.toDate ? data.closeAt.toDate() : null
             };
+        } else {
+            showWindowSetupCard();
         }
     } catch (err) {
         console.warn('Failed to load group ordering window', err);
+    }
+}
+
+function toDatetimeLocalValue(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function showWindowSetupCard() {
+    if (!elWindowSetupCard) return;
+    const now = new Date();
+    const close = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    elWindowOpenInput.value = toDatetimeLocalValue(now);
+    elWindowCloseInput.value = toDatetimeLocalValue(close);
+    elWindowSetupCard.style.display = '';
+    elWindowSetupBtn.addEventListener('click', submitWindowSetup);
+}
+
+async function submitWindowSetup() {
+    const openAt = elWindowOpenInput.value ? new Date(elWindowOpenInput.value) : null;
+    const closeAt = elWindowCloseInput.value ? new Date(elWindowCloseInput.value) : null;
+
+    if (!openAt || !closeAt || isNaN(openAt) || isNaN(closeAt)) {
+        alert('請填寫完整的開團與截止時間。');
+        return;
+    }
+    if (closeAt <= openAt) {
+        alert('截止時間必須晚於開團時間。');
+        return;
+    }
+    if (!confirm(`確定要設定本團期限嗎？\n開團：${formatWindowTime(openAt)}\n截止：${formatWindowTime(closeAt)}\n\n設定後不可修改。`)) {
+        return;
+    }
+
+    elWindowSetupBtn.setAttribute('disabled', 'true');
+    elWindowSetupBtn.querySelector('span').textContent = '正在建立...';
+
+    try {
+        await setDoc(doc(firestoreDb, 'groups', groupId), {
+            openAt: Timestamp.fromDate(openAt),
+            closeAt: Timestamp.fromDate(closeAt),
+            createdAt: serverTimestamp()
+        });
+        groupWindow = { openAt, closeAt };
+        elWindowSetupCard.style.display = 'none';
+        renderOrderWindowBanner();
+    } catch (err) {
+        console.error('Failed to create group window', err);
+        // Most likely another organizer created it first (create-once rule)
+        await loadGroupWindow();
+        if (groupWindow) {
+            elWindowSetupCard.style.display = 'none';
+            renderOrderWindowBanner();
+            alert('本團期限已由其他人設定，已套用現有設定。');
+        } else {
+            alert('建立失敗，請確認網路後再試一次。');
+            elWindowSetupBtn.removeAttribute('disabled');
+            elWindowSetupBtn.querySelector('span').textContent = '建立開團期限';
+        }
     }
 }
 

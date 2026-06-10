@@ -1,11 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Group config doc (openAt/closeAt): admin creates it in Firebase Console.
-    // Clients may read it to show the ordering window, never write it.
+    // Group config doc (openAt/closeAt): the organizer creates it once from
+    // the page UI; after that it is locked (no update/delete), so latecomers
+    // cannot move the deadline.
     match /groups/{groupId} {
       allow read: if true;
-      allow write: if false;
+      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'createdAt'])
+        && request.resource.data.openAt is timestamp
+        && request.resource.data.closeAt is timestamp
+        && request.resource.data.closeAt > request.resource.data.openAt
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
 
     match /groups/{groupId}/orders/{orderId} {

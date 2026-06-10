@@ -565,6 +565,13 @@ h1 {
     color: var(--primary-dark);
 }
 
+.window-setup-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
 .order-window-banner {
     display: inline-block;
     margin-top: 12px;
