@@ -32,7 +32,7 @@ const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
 
 // State Variables
 let menuData = []; // Loaded dynamically from script
-let selectedDrink = null;
+let cart = []; // [{name, img, qty}] — one person can order multiple items at once
 let takenDrinks = {}; // itemName -> [array of names]
 let allOrders = []; // Array of actual order objects {name, drink, img}
 let currentCategory = 'all';
@@ -141,7 +141,7 @@ async function init() {
     
     // Dynamic selected preview empty text placeholder
     document.querySelector('#selected-card h2').textContent = `${brand.emoji} 已選項目`;
-    document.querySelector('#selected-card .preview-empty-text').textContent = `請在下方選單點選您想點的${brand.categoryLabel.slice(2)}`;
+    document.querySelector('#selected-card .preview-empty-text').textContent = `請在下方選單點選您想點的${brand.categoryLabel.slice(2)}，可一次點多份`;
 
     try {
         // Load menu configuration script dynamically instead of fetch to avoid file:// protocol CORS blocks
@@ -217,10 +217,15 @@ function setupEventListeners() {
         renderMenu();
     });
 
-    // Re-select / reset selection event
+    // Cart interactions: quantity +/- and clear
     elSelectedDrinkPreview.addEventListener('click', (e) => {
         if (e.target.classList.contains('change-selection-btn')) {
-            clearSelection();
+            clearCart();
+            return;
+        }
+        const qtyBtn = e.target.closest('.cart-qty-btn');
+        if (qtyBtn) {
+            changeCartQty(qtyBtn.dataset.name, qtyBtn.dataset.action === 'plus' ? 1 : -1);
         }
     });
 
@@ -286,7 +291,8 @@ function renderMenu() {
         matchedDrinks.forEach(drink => {
             const takers = takenDrinks[drink.name] || [];
             const isTaken = takers.length > 0;
-            const isSelected = selectedDrink && selectedDrink.name === drink.name;
+            const cartItem = getCartItem(drink.name);
+            const isSelected = !!cartItem;
             const safeName = escapeHtml(drink.name);
             const safeImg = escapeHtml(drink.img);
             const takerTags = takers.map(name => `<span class="taker-tag" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`).join('');
@@ -303,7 +309,7 @@ function renderMenu() {
                         ${isTaken ? `<div class="takers-list">👥 ${takerTags}</div>` : ''}
                     </div>
                     <div class="drink-action">
-                        <button class="card-btn select-action-btn">${isSelected ? '已選 ✓' : '選擇'}</button>
+                        <button class="card-btn select-action-btn">${isSelected ? `已選 ×${cartItem.qty}` : '選擇'}</button>
                     </div>
                 </div>
             `;
@@ -326,7 +332,7 @@ function renderMenu() {
         card.addEventListener('click', (e) => {
             const name = card.dataset.drinkName;
             const img = card.dataset.drinkImg;
-            selectDrink(name, img);
+            addToCart(name, img);
         });
     });
 }
@@ -337,7 +343,7 @@ function updateMenuStates() {
         const name = card.dataset.drinkName;
         const takers = takenDrinks[name] || [];
         const isTaken = takers.length > 0;
-        const isSelected = selectedDrink && selectedDrink.name === name;
+        const cartItem = getCartItem(name);
 
         if (isTaken) {
             card.classList.add('has-takers');
@@ -345,9 +351,9 @@ function updateMenuStates() {
             card.classList.remove('has-takers');
         }
 
-        if (isSelected) {
+        if (cartItem) {
             card.classList.add('selected-active');
-            card.querySelector('.select-action-btn').textContent = '已選 ✓';
+            card.querySelector('.select-action-btn').textContent = `已選 ×${cartItem.qty}`;
         } else {
             card.classList.remove('selected-active');
             card.querySelector('.select-action-btn').textContent = '選擇';
@@ -384,53 +390,76 @@ function updateMenuStates() {
     });
 }
 
-// Select Drink
-function selectDrink(name, img) {
-    selectedDrink = { name, img };
-    const safeName = escapeHtml(name);
-    const safeImg = escapeHtml(img);
+// Cart helpers: clicking a menu card adds one serving, +/- adjusts quantity
+function getCartItem(name) {
+    return cart.find(i => i.name === name);
+}
 
-    // Update selected preview
-    elSelectedDrinkPreview.innerHTML = `
-        <img class="preview-img" src="${safeImg}" alt="${safeName}">
-        <div class="preview-content">
-            <div class="preview-label">您選擇的項目</div>
-            <div class="preview-title">${safeName}</div>
-            <button class="change-selection-btn">重新選擇</button>
-        </div>
-    `;
-    
-    // Show selected card
-    elSelectedCard.classList.add('show-selected');
-
-    // Update selected card styling in the menu
+function addToCart(name, img) {
+    const item = getCartItem(name);
+    if (item) {
+        item.qty += 1;
+    } else {
+        cart.push({ name, img, qty: 1 });
+    }
+    renderCartPreview();
     updateMenuStates();
-    
-    // Check if we can enable submit button
     checkCanSubmit();
 }
 
-// Clear Selection
-function clearSelection() {
-    selectedDrink = null;
-    const brandNames = {
-        'starbucks': { categoryLabel: '選擇飲品' },
-        'burgerking': { categoryLabel: '選擇餐點' }
-    };
-    const brand = brandNames[storeId] || { categoryLabel: '選擇商品' };
-    elSelectedDrinkPreview.innerHTML = `<span class="preview-empty-text">請在下方選單點選您想點的${brand.categoryLabel.slice(2)}</span>`;
-    
-    // Hide selected card
-    elSelectedCard.classList.remove('show-selected');
-    
+function changeCartQty(name, delta) {
+    const item = getCartItem(name);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+        cart = cart.filter(i => i.name !== name);
+    }
+    renderCartPreview();
     updateMenuStates();
     checkCanSubmit();
+}
+
+function clearCart() {
+    cart = [];
+    renderCartPreview();
+    updateMenuStates();
+    checkCanSubmit();
+}
+
+function renderCartPreview() {
+    if (cart.length === 0) {
+        elSelectedDrinkPreview.innerHTML = `<span class="preview-empty-text">請在下方選單點選您想點的餐點，可一次點多份</span>`;
+        elSelectedCard.classList.remove('show-selected');
+        return;
+    }
+
+    const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+    const rows = cart.map(i => `
+        <div class="cart-item">
+            <img class="cart-item-img" src="${escapeHtml(i.img)}" alt="${escapeHtml(i.name)}" loading="lazy">
+            <span class="cart-item-name">${escapeHtml(i.name)}</span>
+            <div class="cart-qty-controls">
+                <button class="cart-qty-btn" data-action="minus" data-name="${escapeHtml(i.name)}">−</button>
+                <span class="cart-qty">${i.qty}</span>
+                <button class="cart-qty-btn" data-action="plus" data-name="${escapeHtml(i.name)}">＋</button>
+            </div>
+        </div>
+    `).join('');
+
+    elSelectedDrinkPreview.innerHTML = `
+        <div class="cart-list">${rows}</div>
+        <div class="cart-footer">
+            <span class="cart-total">共 ${totalQty} 份</span>
+            <button class="change-selection-btn">清空重選</button>
+        </div>
+    `;
+    elSelectedCard.classList.add('show-selected');
 }
 
 // Form verification
 function checkCanSubmit() {
     const name = elPersonName.value.trim();
-    if (name && selectedDrink && getOrderWindowState() === 'open') {
+    if (name && cart.length > 0 && getOrderWindowState() === 'open') {
         elSubmitBtn.removeAttribute('disabled');
         elSubmitCard.classList.add('show-submit');
     } else {
@@ -691,10 +720,10 @@ function updateSummaryDashboard() {
     }
 }
 
-// Submit Order API call
+// Submit Order: the cart expands to one order record per serving
 async function submitOrder() {
     const name = elPersonName.value.trim();
-    if (!name || !selectedDrink) return;
+    if (!name || cart.length === 0) return;
 
     const windowState = getOrderWindowState();
     if (windowState !== 'open') {
@@ -706,35 +735,38 @@ async function submitOrder() {
     elSubmitBtn.setAttribute('disabled', 'true');
     elSubmitBtn.querySelector('span').textContent = '正在送出點餐...';
 
-    const orderPayload = {
-        groupId: groupId,
-        name: name,
-        drink: selectedDrink.name,
-        img: selectedDrink.img
-    };
+    const items = [];
+    cart.forEach(i => {
+        for (let k = 0; k < i.qty; k++) {
+            items.push({ groupId: groupId, name: name, drink: i.name, img: i.img });
+        }
+    });
+    const summaryText = cart.map(i => `${i.name} ×${i.qty}`).join('、');
 
     if (isMockMode) {
         await new Promise(resolve => setTimeout(resolve, 800));
 
         const localKey = getLocalStorageKey();
         const currentMock = readOrdersFromLocalStorage(localKey);
-        currentMock.push(orderPayload);
+        currentMock.push(...items);
         localStorage.setItem(localKey, JSON.stringify(currentMock));
 
-        showSuccessScreen(name, selectedDrink.name);
+        showSuccessScreen(name, summaryText);
         return;
     }
 
     if (shouldUseFirebase()) {
         try {
-            await addDoc(getFirebaseOrdersCollection(), {
-                name: name,
-                drink: selectedDrink.name,
-                img: selectedDrink.img,
-                createdAt: serverTimestamp()
-            });
+            for (const item of items) {
+                await addDoc(getFirebaseOrdersCollection(), {
+                    name: item.name,
+                    drink: item.drink,
+                    img: item.img,
+                    createdAt: serverTimestamp()
+                });
+            }
 
-            showSuccessScreen(name, selectedDrink.name);
+            showSuccessScreen(name, summaryText);
         } catch (err) {
             console.error('Firebase submit failed', err);
             alert('雲端送出失敗，請確認網路連線後再重試。');
@@ -745,23 +777,21 @@ async function submitOrder() {
     }
 
     try {
-        const res = await fetch(`${API_BASE}order.php`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderPayload)
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            showSuccessScreen(name, selectedDrink.name);
-        } else {
-            alert(data.error || '點餐送出失敗，請重試！');
-            elSubmitBtn.removeAttribute('disabled');
-            elSubmitBtn.querySelector('span').textContent = '確認送出點餐';
+        for (const item of items) {
+            const res = await fetch(`${API_BASE}order.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+            const data = await res.json();
+            if (!data.success) {
+                throw new Error(data.error || '點餐送出失敗，請重試！');
+            }
         }
+        showSuccessScreen(name, summaryText);
     } catch (err) {
         console.error('Submit failed', err);
-        alert('雲端送出失敗，請確認網路連線後再重試。');
+        alert(err.message || '雲端送出失敗，請確認網路連線後再重試。');
         elSubmitBtn.removeAttribute('disabled');
         elSubmitBtn.querySelector('span').textContent = '確認送出點餐';
     }
