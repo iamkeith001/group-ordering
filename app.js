@@ -737,10 +737,41 @@ function renderOrderWindowBanner() {
         groupWindow.closeAt ? `${formatWindowTime(groupWindow.closeAt)} 截止` : ''
     ].filter(Boolean).join('｜');
     const stateText = state === 'before' ? '⏳ 尚未開團' : state === 'closed' ? '🔒 已截止收單' : '🟢 開放點餐中';
-    elOrderWindowBanner.textContent = `${stateText}　${range}`;
+    const actionBtn = state === 'closed'
+        ? `<button class="banner-action-btn" id="new-group-btn">🔄 開新團</button>`
+        : `<button class="banner-action-btn" id="copy-link-btn">📋 複製連結</button>`;
+    elOrderWindowBanner.innerHTML = `${stateText}　${range}${actionBtn}`;
     elOrderWindowBanner.dataset.state = state;
     elOrderWindowBanner.style.display = '';
+
+    const newGroupBtn = document.getElementById('new-group-btn');
+    if (newGroupBtn) newGroupBtn.addEventListener('click', startNewGroup);
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    if (copyLinkBtn) copyLinkBtn.addEventListener('click', copyGroupLink);
+
     checkCanSubmit();
+}
+
+// One-click new group: auto-generate an unused group id and jump to it;
+// the setup card appears there with times and member list prefilled
+function startNewGroup() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const defaultName = `${d.getMonth() + 1}/${d.getDate()}點餐`;
+    const name = prompt('幫新團取個名稱：', defaultName);
+    if (name === null) return;
+    const newId = `t${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    location.href = `${location.pathname}?g=${newId}&n=${encodeURIComponent(name.trim() || defaultName)}`;
+}
+
+async function copyGroupLink() {
+    const url = `${location.origin}${location.pathname}?g=${encodeURIComponent(groupId)}&n=${encodeURIComponent(groupName)}`;
+    try {
+        await navigator.clipboard.writeText(url);
+        alert('已複製本團連結，貼到群組就能邀大家點餐！');
+    } catch (err) {
+        prompt('複製這個連結分享給大家：', url);
+    }
 }
 
 // Orders are append-only; a re-submission is a new batch under the same name
