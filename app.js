@@ -75,7 +75,7 @@ async function init() {
 
     try {
         // Load menu configuration script dynamically instead of fetch to avoid file:// protocol CORS blocks
-        await loadMenuScript(`menu/${storeId}.js`);
+        await loadMenuScript(`menu/${storeId}.js?v=2`);
         menuData = window[`${storeId}Menu`] || [];
     } catch (err) {
         console.error(`Failed to load menu script: menu/${storeId}.js`, err);
