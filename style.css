@@ -565,19 +565,24 @@ h1 {
     color: var(--primary-dark);
 }
 
-.clear-btn-link {
-    background: transparent;
-    border: none;
-    color: #d32f2f;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    padding: 2px 4px;
+.order-window-banner {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: #e8f5e9;
+    color: #1b5e20;
 }
 
-.clear-btn-link:hover {
-    text-decoration: underline;
+.order-window-banner[data-state="before"] {
+    background: #fff8e1;
+    color: #8d6e00;
+}
+
+.order-window-banner[data-state="closed"] {
+    background: #ffebee;
     color: #b71c1c;
 }
 

@@ -2,6 +2,8 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/fireba
 import {
     addDoc,
     collection,
+    doc,
+    getDoc,
     getFirestore,
     onSnapshot,
     orderBy,
@@ -37,6 +39,7 @@ let isMockMode = false;
 let syncInterval = null;
 let firebaseUnsubscribe = null;
 let hasRemoteConnectionError = false;
+let groupWindow = null; // {openAt: Date|null, closeAt: Date|null} from groups/{groupId} doc
 const firebaseApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(firebaseApp);
 
@@ -56,7 +59,7 @@ const elStatStyles = document.getElementById('stat-styles');
 const elSummaryList = document.getElementById('summary-list');
 const elSyncStatus = document.getElementById('sync-status');
 const elSyncStatusText = document.getElementById('sync-status-text');
-const elClearDataBtn = document.getElementById('clear-data-btn');
+const elOrderWindowBanner = document.getElementById('order-window-banner');
 
 // Success view elements
 const elMainContainer = document.getElementById('main-container');
@@ -151,6 +154,11 @@ async function init() {
         renderMenu();
         updateSummaryDashboard();
         startFirebaseSync();
+        loadGroupWindow().then(() => {
+            renderOrderWindowBanner();
+            // Re-evaluate open/closed state as time passes
+            setInterval(renderOrderWindowBanner, 30000);
+        });
     } else {
         // Load initial orders
         syncData().then(() => {
@@ -209,15 +217,6 @@ function setupEventListeners() {
             clearSelection();
         }
     });
-
-    // Clear data event
-    if (elClearDataBtn) {
-        elClearDataBtn.addEventListener('click', () => {
-            if (confirm('確定要清空本群組的所有點餐資料嗎？')) {
-                clearGroupData();
-            }
-        });
-    }
 
     // Success dialog: reload page to support ordering for another person
     elSuccessContinueBtn.addEventListener('click', () => {
@@ -425,7 +424,7 @@ function clearSelection() {
 // Form verification
 function checkCanSubmit() {
     const name = elPersonName.value.trim();
-    if (name && selectedDrink) {
+    if (name && selectedDrink && getOrderWindowState() === 'open') {
         elSubmitBtn.removeAttribute('disabled');
         elSubmitCard.classList.add('show-submit');
     } else {
@@ -439,15 +438,15 @@ function startFirebaseSync() {
 
     const ordersQuery = query(getFirebaseOrdersCollection(), orderBy('createdAt', 'asc'));
     firebaseUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
-        allOrders = dedupeOrdersByName(snapshot.docs.map(doc => {
-            const data = doc.data();
+        allOrders = snapshot.docs.map(d => {
+            const data = d.data();
             return {
                 name: data.name || '',
                 drink: data.drink || '',
                 img: data.img || '',
                 createdAt: data.createdAt || null
             };
-        }));
+        });
         processOrdersToTakenMap(allOrders);
         hasRemoteConnectionError = false;
         updateMenuStates();
@@ -485,7 +484,7 @@ async function syncData() {
         
         if (data.success && data.orders) {
             hasRemoteConnectionError = false;
-            allOrders = dedupeOrdersByName(data.orders);
+            allOrders = data.orders;
             processOrdersToTakenMap(allOrders);
         } else {
             throw new Error(data.error || 'API error response');
@@ -523,15 +522,51 @@ function showGroupNotFoundError() {
 }
 
 
-// Orders are append-only (Firestore rules forbid update/delete), so a person
-// who re-submits gets a new record; keep only each name's latest order.
-// Input must be sorted oldest-first so later entries win.
-function dedupeOrdersByName(orders) {
-    const latestByName = new Map();
-    orders.forEach(o => {
-        latestByName.set(String(o.name || '').trim(), o);
-    });
-    return [...latestByName.values()];
+// Ordering window helpers: groups/{groupId} doc may define openAt/closeAt
+async function loadGroupWindow() {
+    try {
+        const snap = await getDoc(doc(firestoreDb, 'groups', groupId));
+        if (snap.exists()) {
+            const data = snap.data();
+            groupWindow = {
+                openAt: data.openAt && data.openAt.toDate ? data.openAt.toDate() : null,
+                closeAt: data.closeAt && data.closeAt.toDate ? data.closeAt.toDate() : null
+            };
+        }
+    } catch (err) {
+        console.warn('Failed to load group ordering window', err);
+    }
+}
+
+function getOrderWindowState() {
+    if (!groupWindow) return 'open';
+    const now = new Date();
+    if (groupWindow.openAt && now < groupWindow.openAt) return 'before';
+    if (groupWindow.closeAt && now > groupWindow.closeAt) return 'closed';
+    return 'open';
+}
+
+function formatWindowTime(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderOrderWindowBanner() {
+    if (!elOrderWindowBanner) return;
+    if (!groupWindow || (!groupWindow.openAt && !groupWindow.closeAt)) {
+        elOrderWindowBanner.style.display = 'none';
+        return;
+    }
+    const state = getOrderWindowState();
+    const range = [
+        groupWindow.openAt ? `${formatWindowTime(groupWindow.openAt)} 開團` : '',
+        groupWindow.closeAt ? `${formatWindowTime(groupWindow.closeAt)} 截止` : ''
+    ].filter(Boolean).join('｜');
+    const stateText = state === 'before' ? '⏳ 尚未開團' : state === 'closed' ? '🔒 已截止收單' : '🟢 開放點餐中';
+    elOrderWindowBanner.textContent = `${stateText}　${range}`;
+    elOrderWindowBanner.dataset.state = state;
+    elOrderWindowBanner.style.display = '';
+    checkCanSubmit();
 }
 
 // Process flat order array into drink mapping
@@ -562,34 +597,16 @@ function loadMockData() {
         localStorage.setItem(localKey, JSON.stringify(initialMock));
     }
     
-    allOrders = dedupeOrdersByName(readOrdersFromLocalStorage(localKey));
+    allOrders = readOrdersFromLocalStorage(localKey);
     processOrdersToTakenMap(allOrders);
-}
-
-// Clear all local mock orders for the current group and store
-async function clearGroupData() {
-    if (isMockMode) {
-        const localKey = getLocalStorageKey();
-        localStorage.setItem(localKey, JSON.stringify([]));
-        allOrders = [];
-        takenDrinks = {};
-        
-        // Re-render components
-        updateMenuStates();
-        updateSummaryDashboard();
-        clearSelection();
-        
-        console.log(`🗑️ Local Mock orders for ${storeId} successfully cleared`);
-    } else {
-        alert('正式版不開放清空雲端資料，避免誤刪其他人的點餐。');
-    }
 }
 
 // Update summary dashboard card
 function updateSummaryDashboard() {
     const count = allOrders.length;
+    const peopleCount = new Set(allOrders.map(o => String(o.name || '').trim())).size;
     elSummaryCountTotal.textContent = `${count} 份`;
-    elStatPeople.textContent = `${count} 人`;
+    elStatPeople.textContent = `${peopleCount} 人`;
 
     const stylesCount = Object.keys(takenDrinks).length;
     elStatStyles.textContent = `${stylesCount} 種`;
@@ -611,6 +628,13 @@ function updateSummaryDashboard() {
 async function submitOrder() {
     const name = elPersonName.value.trim();
     if (!name || !selectedDrink) return;
+
+    const windowState = getOrderWindowState();
+    if (windowState !== 'open') {
+        alert(windowState === 'before' ? '尚未到開團時間，請稍後再點餐。' : '已超過收單期限，本團已截止點餐。');
+        renderOrderWindowBanner();
+        return;
+    }
 
     elSubmitBtn.setAttribute('disabled', 'true');
     elSubmitBtn.querySelector('span').textContent = '正在送出點餐...';

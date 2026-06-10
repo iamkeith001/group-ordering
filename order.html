@@ -15,7 +15,8 @@
             <div class="group-badge" id="group-name">載入群組中...</div>
 
             <h1>🍔 漢堡王群組點餐</h1>
-            <p class="subtitle">每人限選一份，選好後送出點餐明細</p>
+            <p class="subtitle">選好餐點後送出，可重複點餐、幫同事加點</p>
+            <div class="order-window-banner" id="order-window-banner" style="display:none;"></div>
         </header>
 
         <!-- Layout Grid -->
@@ -76,10 +77,7 @@
                 <section class="summary-panel" id="summary-panel">
                     <div class="summary-title-row">
                         <h2 class="summary-title">👥 本群組點餐統計</h2>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button id="clear-data-btn" class="clear-btn-link">清空資料</button>
-                            <span class="summary-count-total" id="summary-count-total">0 份</span>
-                        </div>
+                        <span class="summary-count-total" id="summary-count-total">0 份</span>
                     </div>
 
                     <div class="summary-stats-box">
@@ -129,6 +127,6 @@
         <span id="sync-status-text">點餐資訊已同步</span>
     </div>
 
-    <script type="module" src="app.js?v=5"></script>
+    <script type="module" src="app.js?v=6"></script>
 </body>
 </html>
