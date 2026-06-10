@@ -172,6 +172,13 @@ async function init() {
     // Render category buttons dynamically
     renderCategoryTabs();
 
+    // Name dropdown starts from the built-in member list; the group's own
+    // list (if configured at setup time) overrides it once loaded.
+    if (DEFAULT_MEMBERS.length > 0) {
+        groupMembers = [...DEFAULT_MEMBERS];
+        applyMemberSelect();
+    }
+
     if (shouldUseFirebase()) {
         renderMenu();
         updateSummaryDashboard();
@@ -585,8 +592,10 @@ async function loadGroupWindow() {
                 openAt: data.openAt && data.openAt.toDate ? data.openAt.toDate() : null,
                 closeAt: data.closeAt && data.closeAt.toDate ? data.closeAt.toDate() : null
             };
-            groupMembers = Array.isArray(data.members) && data.members.length > 0 ? data.members : null;
-            applyMemberSelect();
+            if (Array.isArray(data.members) && data.members.length > 0) {
+                groupMembers = data.members;
+                applyMemberSelect();
+            }
         } else {
             showWindowSetupCard();
         }
@@ -599,8 +608,12 @@ async function loadGroupWindow() {
 // instead of typed, so the overwrite-by-name logic can't be broken by typos.
 function applyMemberSelect() {
     if (!groupMembers) return;
+    const current = elPersonNameSelect.value;
     elPersonNameSelect.innerHTML = `<option value="">— 請選擇你的名字 —</option>`
         + groupMembers.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    if (current && groupMembers.includes(current)) {
+        elPersonNameSelect.value = current;
+    }
     elPersonNameSelect.style.display = '';
     elPersonName.style.display = 'none';
     checkCanSubmit();
