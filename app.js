@@ -1,11 +1,27 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+import {
+    addDoc,
+    collection,
+    getFirestore,
+    onSnapshot,
+    orderBy,
+    query,
+    serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+
 // Configuration & Parameters
 const params = new URLSearchParams(location.search);
 const DEFAULT_REMOTE_API_BASE = 'https://claw.kht50.cc/starbucks/api/';
-const API_BASE = params.get('api') || (
-    location.hostname.endsWith('github.io')
-        ? DEFAULT_REMOTE_API_BASE
-        : '/api/'
-);
+const BACKEND_MODE = params.get('backend') || (params.get('api') ? 'api' : 'firebase');
+const API_BASE = params.get('api') || DEFAULT_REMOTE_API_BASE;
+const firebaseConfig = {
+    apiKey: 'AIzaSyDagyGwaESWrhkxPCzfxzvCucNxM5jSvrE',
+    authDomain: 'group-ordering-keith-20260610.firebaseapp.com',
+    projectId: 'group-ordering-keith-20260610',
+    storageBucket: 'group-ordering-keith-20260610.firebasestorage.app',
+    messagingSenderId: '831890094685',
+    appId: '1:831890094685:web:5bce79be4626e8e03febb4'
+};
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
@@ -19,7 +35,10 @@ let currentCategory = 'all';
 let searchQuery = '';
 let isMockMode = false;
 let syncInterval = null;
+let firebaseUnsubscribe = null;
 let hasRemoteConnectionError = false;
+const firebaseApp = initializeApp(firebaseConfig);
+const firestoreDb = getFirestore(firebaseApp);
 
 // DOM Elements
 const elGroupName = document.getElementById('group-name');
@@ -74,6 +93,14 @@ function readOrdersFromLocalStorage(key) {
     }
 }
 
+function shouldUseFirebase() {
+    return !isMockMode && BACKEND_MODE === 'firebase';
+}
+
+function getFirebaseOrdersCollection() {
+    return collection(firestoreDb, 'groups', groupId, 'orders');
+}
+
 // Helper to load external javascript files locally without CORS errors
 function loadMenuScript(src) {
     return new Promise((resolve, reject) => {
@@ -120,24 +147,32 @@ async function init() {
     // Render category buttons dynamically
     renderCategoryTabs();
 
-    // Load initial orders
-    syncData().then(() => {
+    if (shouldUseFirebase()) {
         renderMenu();
         updateSummaryDashboard();
-    });
+        startFirebaseSync();
+    } else {
+        // Load initial orders
+        syncData().then(() => {
+            renderMenu();
+            updateSummaryDashboard();
+        });
+    }
 
     // Setup Event Listeners
     setupEventListeners();
 
-    // Start 5s background synchronization
-    syncInterval = setInterval(() => {
-        showSyncingStatus(true);
-        syncData().then(() => {
-            updateMenuStates();
-            updateSummaryDashboard();
-            setTimeout(() => showSyncingStatus(false), 800);
-        });
-    }, 5000);
+    if (!shouldUseFirebase()) {
+        // Start 5s background synchronization for API / Mock mode
+        syncInterval = setInterval(() => {
+            showSyncingStatus(true);
+            syncData().then(() => {
+                updateMenuStates();
+                updateSummaryDashboard();
+                setTimeout(() => showSyncingStatus(false), 800);
+            });
+        }, 5000);
+    }
 }
 
 // Event Listeners Binding
@@ -399,6 +434,33 @@ function checkCanSubmit() {
     }
 }
 
+function startFirebaseSync() {
+    showSyncingStatus(true);
+
+    const ordersQuery = query(getFirebaseOrdersCollection(), orderBy('createdAt', 'asc'));
+    firebaseUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+        allOrders = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                name: data.name || '',
+                drink: data.drink || '',
+                img: data.img || '',
+                createdAt: data.createdAt || null
+            };
+        });
+        processOrdersToTakenMap(allOrders);
+        hasRemoteConnectionError = false;
+        updateMenuStates();
+        updateSummaryDashboard();
+        setTimeout(() => showSyncingStatus(false), 300);
+    }, (err) => {
+        console.error('Firebase sync failed', err);
+        hasRemoteConnectionError = true;
+        showRemoteConnectionError();
+        showSyncingStatus(false);
+    });
+}
+
 // Synchronize orders data from Server / LocalStorage
 async function syncData() {
     if (isMockMode) {
@@ -508,7 +570,7 @@ async function clearGroupData() {
         
         console.log(`🗑️ Local Mock orders for ${storeId} successfully cleared`);
     } else {
-        alert('此頁面非本地 Mock 測試模式，無法直接清除伺服器雲端資料。');
+        alert('正式版不開放清空雲端資料，避免誤刪其他人的點餐。');
     }
 }
 
@@ -561,6 +623,25 @@ async function submitOrder() {
         return;
     }
 
+    if (shouldUseFirebase()) {
+        try {
+            await addDoc(getFirebaseOrdersCollection(), {
+                name: name,
+                drink: selectedDrink.name,
+                img: selectedDrink.img,
+                createdAt: serverTimestamp()
+            });
+
+            showSuccessScreen(name, selectedDrink.name);
+        } catch (err) {
+            console.error('Firebase submit failed', err);
+            alert('雲端送出失敗，請確認網路連線後再重試。');
+            elSubmitBtn.removeAttribute('disabled');
+            elSubmitBtn.querySelector('span').textContent = '確認送出點餐';
+        }
+        return;
+    }
+
     try {
         const res = await fetch(`${API_BASE}order.php`, {
             method: 'POST',
@@ -586,6 +667,11 @@ async function submitOrder() {
 
 // Show Success dialog and transition
 function showSuccessScreen(name, drinkName) {
+    if (firebaseUnsubscribe) {
+        firebaseUnsubscribe();
+        firebaseUnsubscribe = null;
+    }
+
     elSuccessName.textContent = name;
     elSuccessDrink.textContent = drinkName;
 
