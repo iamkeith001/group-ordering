@@ -6,10 +6,14 @@ service cloud.firestore {
     // cannot move the deadline.
     match /groups/{groupId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'createdAt'])
+      allow create: if request.resource.data.keys().hasOnly(['openAt', 'closeAt', 'members', 'createdAt'])
         && request.resource.data.openAt is timestamp
         && request.resource.data.closeAt is timestamp
         && request.resource.data.closeAt > request.resource.data.openAt
+        && (!('members' in request.resource.data)
+          || (request.resource.data.members is list
+            && request.resource.data.members.size() > 0
+            && request.resource.data.members.size() <= 200))
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
@@ -26,9 +30,15 @@ service cloud.firestore {
             && (!('closeAt' in get(groupPath()).data) || request.time <= get(groupPath()).data.closeAt)
           );
       }
+      // Groups with a member list only accept orders under listed names
+      function nameAllowed() {
+        return !exists(groupPath())
+          || !('members' in get(groupPath()).data)
+          || request.resource.data.name in get(groupPath()).data.members;
+      }
 
       allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['name', 'drink', 'img', 'createdAt'])
+      allow create: if request.resource.data.keys().hasOnly(['name', 'drink', 'img', 'batch', 'createdAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 40
@@ -37,8 +47,13 @@ service cloud.firestore {
         && request.resource.data.drink.size() <= 120
         && request.resource.data.img is string
         && request.resource.data.img.size() <= 1000
+        && (!('batch' in request.resource.data)
+          || (request.resource.data.batch is string
+            && request.resource.data.batch.size() > 0
+            && request.resource.data.batch.size() <= 60))
         && request.resource.data.createdAt == request.time
-        && withinOrderWindow();
+        && withinOrderWindow()
+        && nameAllowed();
       allow update, delete: if false;
     }
   }

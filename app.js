@@ -29,6 +29,10 @@ const firebaseConfig = {
 const storeId = 'burgerking'; // Hardcoded to Burger King
 const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
+// 常用點餐成員：開團時會自動帶入「成員名單」欄位，開團人可現場增刪
+const DEFAULT_MEMBERS = [
+    'Keith'
+];
 
 // State Variables
 let menuData = []; // Loaded dynamically from script
@@ -42,6 +46,7 @@ let syncInterval = null;
 let firebaseUnsubscribe = null;
 let hasRemoteConnectionError = false;
 let groupWindow = null; // {openAt: Date|null, closeAt: Date|null} from groups/{groupId} doc
+let groupMembers = null; // string[] from groups/{groupId}.members — when set, name input becomes a dropdown
 const firebaseApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(firebaseApp);
 
@@ -51,6 +56,7 @@ const elSearchInput = document.getElementById('search-input');
 const elCategoryTabs = document.getElementById('category-tabs');
 const elMenuList = document.getElementById('menu-list');
 const elPersonName = document.getElementById('person-name');
+const elPersonNameSelect = document.getElementById('person-name-select');
 const elSelectedCard = document.getElementById('selected-card');
 const elSelectedDrinkPreview = document.getElementById('selected-drink-preview');
 const elSubmitCard = document.getElementById('submit-card');
@@ -65,6 +71,7 @@ const elOrderWindowBanner = document.getElementById('order-window-banner');
 const elWindowSetupCard = document.getElementById('window-setup-card');
 const elWindowOpenInput = document.getElementById('window-open-input');
 const elWindowCloseInput = document.getElementById('window-close-input');
+const elWindowMembersInput = document.getElementById('window-members-input');
 const elWindowSetupBtn = document.getElementById('window-setup-btn');
 
 // Success view elements
@@ -199,6 +206,7 @@ function setupEventListeners() {
 
     // Name input verification
     elPersonName.addEventListener('input', checkCanSubmit);
+    elPersonNameSelect.addEventListener('change', checkCanSubmit);
 
     // Order submit
     elSubmitBtn.addEventListener('click', submitOrder);
@@ -458,7 +466,7 @@ function renderCartPreview() {
 
 // Form verification
 function checkCanSubmit() {
-    const name = elPersonName.value.trim();
+    const name = getPersonName();
     if (name && cart.length > 0 && getOrderWindowState() === 'open') {
         elSubmitBtn.removeAttribute('disabled');
         elSubmitCard.classList.add('show-submit');
@@ -473,15 +481,16 @@ function startFirebaseSync() {
 
     const ordersQuery = query(getFirebaseOrdersCollection(), orderBy('createdAt', 'asc'));
     firebaseUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
-        allOrders = snapshot.docs.map(d => {
+        allOrders = keepLatestBatchPerName(snapshot.docs.map(d => {
             const data = d.data();
             return {
                 name: data.name || '',
                 drink: data.drink || '',
                 img: data.img || '',
+                batch: data.batch || '',
                 createdAt: data.createdAt || null
             };
-        });
+        }));
         processOrdersToTakenMap(allOrders);
         hasRemoteConnectionError = false;
         updateMenuStates();
@@ -519,7 +528,7 @@ async function syncData() {
         
         if (data.success && data.orders) {
             hasRemoteConnectionError = false;
-            allOrders = data.orders;
+            allOrders = keepLatestBatchPerName(data.orders);
             processOrdersToTakenMap(allOrders);
         } else {
             throw new Error(data.error || 'API error response');
@@ -567,12 +576,30 @@ async function loadGroupWindow() {
                 openAt: data.openAt && data.openAt.toDate ? data.openAt.toDate() : null,
                 closeAt: data.closeAt && data.closeAt.toDate ? data.closeAt.toDate() : null
             };
+            groupMembers = Array.isArray(data.members) && data.members.length > 0 ? data.members : null;
+            applyMemberSelect();
         } else {
             showWindowSetupCard();
         }
     } catch (err) {
         console.warn('Failed to load group ordering window', err);
     }
+}
+
+// When the group defines a member list, names are picked from a dropdown
+// instead of typed, so the overwrite-by-name logic can't be broken by typos.
+function applyMemberSelect() {
+    if (!groupMembers) return;
+    elPersonNameSelect.innerHTML = `<option value="">— 請選擇你的名字 —</option>`
+        + groupMembers.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    elPersonNameSelect.style.display = '';
+    elPersonName.style.display = 'none';
+    checkCanSubmit();
+}
+
+function getPersonName() {
+    if (groupMembers) return elPersonNameSelect.value.trim();
+    return elPersonName.value.trim();
 }
 
 function toDatetimeLocalValue(d) {
@@ -586,6 +613,7 @@ function showWindowSetupCard() {
     const close = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     elWindowOpenInput.value = toDatetimeLocalValue(now);
     elWindowCloseInput.value = toDatetimeLocalValue(close);
+    elWindowMembersInput.value = DEFAULT_MEMBERS.join('\n');
     elWindowSetupCard.style.display = '';
     elWindowSetupBtn.addEventListener('click', submitWindowSetup);
 }
@@ -593,6 +621,9 @@ function showWindowSetupCard() {
 async function submitWindowSetup() {
     const openAt = elWindowOpenInput.value ? new Date(elWindowOpenInput.value) : null;
     const closeAt = elWindowCloseInput.value ? new Date(elWindowCloseInput.value) : null;
+    const members = [...new Set(
+        elWindowMembersInput.value.split('\n').map(s => s.trim()).filter(Boolean)
+    )];
 
     if (!openAt || !closeAt || isNaN(openAt) || isNaN(closeAt)) {
         alert('請填寫完整的開團與截止時間。');
@@ -602,7 +633,15 @@ async function submitWindowSetup() {
         alert('截止時間必須晚於開團時間。');
         return;
     }
-    if (!confirm(`確定要設定本團期限嗎？\n開團：${formatWindowTime(openAt)}\n截止：${formatWindowTime(closeAt)}\n\n設定後不可修改。`)) {
+    if (members.length === 0) {
+        alert('請至少填寫一位點餐成員。');
+        return;
+    }
+    if (members.some(m => m.length > 40)) {
+        alert('成員名字最長 40 個字。');
+        return;
+    }
+    if (!confirm(`確定要設定本團期限嗎？\n開團：${formatWindowTime(openAt)}\n截止：${formatWindowTime(closeAt)}\n成員：${members.length} 人\n\n設定後不可修改。`)) {
         return;
     }
 
@@ -613,9 +652,12 @@ async function submitWindowSetup() {
         await setDoc(doc(firestoreDb, 'groups', groupId), {
             openAt: Timestamp.fromDate(openAt),
             closeAt: Timestamp.fromDate(closeAt),
+            members: members,
             createdAt: serverTimestamp()
         });
         groupWindow = { openAt, closeAt };
+        groupMembers = members;
+        applyMemberSelect();
         elWindowSetupCard.style.display = 'none';
         renderOrderWindowBanner();
     } catch (err) {
@@ -665,6 +707,20 @@ function renderOrderWindowBanner() {
     checkCanSubmit();
 }
 
+// Orders are append-only; a re-submission is a new batch under the same name
+// and overrides the old one. Keep only each name's latest batch (input is
+// sorted oldest-first). Legacy records without a batch count as one-off
+// batches, so only the newest single record survives for that name.
+function keepLatestBatchPerName(orders) {
+    const latestBatchByName = new Map();
+    orders.forEach((o, idx) => {
+        latestBatchByName.set(String(o.name || '').trim(), o.batch || `__single_${idx}`);
+    });
+    return orders.filter((o, idx) =>
+        latestBatchByName.get(String(o.name || '').trim()) === (o.batch || `__single_${idx}`)
+    );
+}
+
 // Process flat order array into drink mapping
 function processOrdersToTakenMap(orders) {
     const map = {};
@@ -693,7 +749,7 @@ function loadMockData() {
         localStorage.setItem(localKey, JSON.stringify(initialMock));
     }
     
-    allOrders = readOrdersFromLocalStorage(localKey);
+    allOrders = keepLatestBatchPerName(readOrdersFromLocalStorage(localKey));
     processOrdersToTakenMap(allOrders);
 }
 
@@ -722,7 +778,7 @@ function updateSummaryDashboard() {
 
 // Submit Order: the cart expands to one order record per serving
 async function submitOrder() {
-    const name = elPersonName.value.trim();
+    const name = getPersonName();
     if (!name || cart.length === 0) return;
 
     const windowState = getOrderWindowState();
@@ -735,10 +791,14 @@ async function submitOrder() {
     elSubmitBtn.setAttribute('disabled', 'true');
     elSubmitBtn.querySelector('span').textContent = '正在送出點餐...';
 
+    // All records of one submission share a batch id, so a later submission
+    // by the same name replaces the whole batch at once.
+    const batchId = (crypto.randomUUID && crypto.randomUUID())
+        || `b${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const items = [];
     cart.forEach(i => {
         for (let k = 0; k < i.qty; k++) {
-            items.push({ groupId: groupId, name: name, drink: i.name, img: i.img });
+            items.push({ groupId: groupId, name: name, drink: i.name, img: i.img, batch: batchId });
         }
     });
     const summaryText = cart.map(i => `${i.name} ×${i.qty}`).join('、');
@@ -762,6 +822,7 @@ async function submitOrder() {
                     name: item.name,
                     drink: item.drink,
                     img: item.img,
+                    batch: item.batch,
                     createdAt: serverTimestamp()
                 });
             }

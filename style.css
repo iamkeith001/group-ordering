@@ -426,7 +426,9 @@ h1 {
     margin-bottom: 8px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select,
+.form-group textarea {
     width: 100%;
     padding: 14px 16px;
     border: 1.5px solid var(--border-color);
@@ -436,11 +438,21 @@ h1 {
     color: var(--text-main);
     background: #fff;
     transition: var(--transition);
+    font-family: inherit;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(0, 98, 65, 0.1);
+}
+
+.reorder-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 8px;
 }
 
 /* Selected Drink Preview Card - Hidden by default until selection is made */

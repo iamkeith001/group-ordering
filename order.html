@@ -61,6 +61,10 @@
                         <label for="window-close-input">截止時間</label>
                         <input type="datetime-local" id="window-close-input">
                     </div>
+                    <div class="form-group">
+                        <label for="window-members-input">點餐成員名單（一行一個名字）</label>
+                        <textarea id="window-members-input" rows="6"></textarea>
+                    </div>
                     <button class="action-btn" id="window-setup-btn">
                         <span>建立開團期限</span>
                     </button>
@@ -68,10 +72,12 @@
 
                 <!-- 1. Name Input Card -->
                 <section class="sidebar-card" id="name-card">
-                    <h2>2️⃣ 步驟二：填寫點餐姓名</h2>
+                    <h2>2️⃣ 步驟二：選擇點餐人</h2>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="person-name">您的名字（將顯示在團體明細中）</label>
+                        <select id="person-name-select" style="display:none;"></select>
                         <input type="text" id="person-name" placeholder="輸入您的姓名或暱稱" autocomplete="off">
+                        <p class="reorder-hint">點錯了嗎？用同一個名字重新送出一次，新單會覆蓋舊單。</p>
                     </div>
                 </section>
 
@@ -144,6 +150,6 @@
         <span id="sync-status-text">點餐資訊已同步</span>
     </div>
 
-    <script type="module" src="app.js?v=8"></script>
+    <script type="module" src="app.js?v=9"></script>
 </body>
 </html>
