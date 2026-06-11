@@ -31,23 +31,26 @@ const groupId = params.get('g') || 'g_demo';
 const groupName = decodeURIComponent(params.get('n') || '測試點餐群組');
 // 預設團購標題：開團時會自動帶入「團購標題」欄位，開團人可現場修改
 const DEFAULT_TITLE = '漢堡王群組點餐';
-// 預設 15 項餐點名：開團時會自動帶入「餐點名單」欄位，開團人可現場修改
+// 預設餐點名：開團時會自動帶入「餐點名單」欄位，開團人可現場修改
 const DEFAULT_MENU_ITEMS = [
-    '華堡 (Whopper)',
-    '雙層華堡 (Double Whopper)',
-    '小華堡 (Whopper Jr.)',
-    '辣味華堡 (Spicy Whopper)',
-    '美式花生雙層牛肉堡',
-    '勁濃培根雙層牛肉堡',
-    '火烤雞腿堡',
-    '華鱈魚堡',
-    '脆洋蔥雙起司雞排堡',
-    '經典薯條',
-    '酥炸洋蔥圈',
-    '炸雞塊 (Chicken Nuggets)',
-    '可口可樂 (Coke)',
-    '檸檬紅茶',
-    '熱無糖紅茶'
+    '套餐選擇',
+    '捲捲德腸烤牛堡 +小薯+4塊雞塊+中飲',
+    '火烤雞腿培根堡+小薯+4塊雞塊+中飲',
+    '雙起士牛肉堡+薯條(小)+4塊雞塊+中飲',
+    '西部小華堡+薯條(小)+4塊雞塊+中飲',
+    '花生培根脆雞堡+薯條(小)+4塊雞塊+中飲',
+    '小華堡(原/辣)+雙起士培根牛肉堡',
+    '捲捲德腸堡+BBQ培根牛肉堡',
+    '美式花生雙層脆雞堡餐+薯條(小)+中飲',
+    'Q彈海老堡(蝦堡)+薯條(小)+中飲',
+    '附餐飲料',
+    '可樂(去冰)',
+    '無糖可樂(少冰)',
+    '綠茶(去冰)',
+    '紅茶(去冰)',
+    '激浪 (去冰)',
+    '玉米濃湯(小)',
+    '熱紅茶'
 ];
 // 常用點餐成員（依首字筆劃排序）：開團時會自動帶入「成員名單」欄位，開團人可現場增刪
 const DEFAULT_MEMBERS = [
@@ -151,18 +154,30 @@ function getFirebaseOrdersCollection() {
     return collection(firestoreDb, 'groups', groupId, 'orders');
 }
 
-// The menu is a flat editable list of item names (no fixed photos, since
-// restaurant menus change over time)
+const MENU_SECTION_HEADINGS = new Set(['套餐選擇', '附餐飲料']);
+
+// The menu is an editable list of item names. Known section headings in the
+// list become category labels, so organizers can paste a simple text menu.
 function applyTitle() {
     document.title = `${groupTitle} - 選擇你的餐點`;
     document.querySelector('.header-wrapper h1').textContent = `🍔 ${groupTitle}`;
 }
 
 function buildMenuFromItems(items) {
-    return [{
-        category: '餐點',
-        drinks: items.map(n => ({ name: n, img: '' }))
-    }];
+    const groups = [];
+    let current = { category: '餐點', drinks: [] };
+
+    items.forEach((item) => {
+        if (MENU_SECTION_HEADINGS.has(item)) {
+            if (current.drinks.length > 0) groups.push(current);
+            current = { category: item, drinks: [] };
+            return;
+        }
+        current.drinks.push({ name: item, img: '' });
+    });
+
+    if (current.drinks.length > 0) groups.push(current);
+    return groups.length > 0 ? groups : [{ category: '餐點', drinks: [] }];
 }
 
 // Initialization
